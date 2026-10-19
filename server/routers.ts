@@ -325,7 +325,7 @@ export const appRouter = router({
         description: z.string().trim().min(3).max(280),
         ctaText: z.string().trim().min(2).max(50),
         tone: z.enum(["gold", "azure", "emerald"]),
-        imageUrl: z.string().regex(/^\/manus-storage\/announcements\//).max(500).optional(),
+        imageUrl: z.string().max(500).optional(),
       }))
       .mutation(async ({ input }) => {
         await createAnnouncement({ ...input, isActive: 1, sortOrder: 0 });
@@ -337,27 +337,26 @@ export const appRouter = router({
         dataUrl: z.string().max(4_300_000),
       }))
       .mutation(async ({ ctx, input }) => {
-        const match = input.dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+        const match = input.dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([\s\S]+)$/);
         if (!match) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "يُسمح بصور PNG أو JPEG أو WebP فقط." });
         }
 
-        const [, mimeType, base64Data] = match;
-        const image = Buffer.from(base64Data, "base64");
+        const [, mimeType, rawBase64] = match;
+        const image = Buffer.from(rawBase64.replace(/\s+/g, ""), "base64");
         if (!image.length || image.length > 3 * 1024 * 1024) {
           throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "يجب ألا يتجاوز حجم الصورة 3 ميغابايت." });
         }
 
-        const validSignature = (
-          (mimeType === "image/png" && image.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) ||
-          (mimeType === "image/jpeg" && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff) ||
-          (mimeType === "image/webp" && image.subarray(0, 4).toString() === "RIFF" && image.subarray(8, 12).toString() === "WEBP")
-        );
-        if (!validSignature) {
+        const isPng = (mimeType === "image/png" && image.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
+        const isJpeg = ((mimeType === "image/jpeg" || mimeType === "image/jpg") && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff);
+        const isWebp = (mimeType === "image/webp" && image.subarray(0, 4).toString() === "RIFF" && image.subarray(8, 12).toString() === "WEBP");
+
+        if (!isPng && !isJpeg && !isWebp) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "تعذر التحقق من صيغة الصورة." });
         }
 
-        const extension = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+        const extension = isPng ? "png" : isWebp ? "webp" : "jpg";
         const { url } = await storagePut(`announcements/${ctx.user.id}/${nanoid(12)}.${extension}`, image, mimeType);
         return { url };
       }),

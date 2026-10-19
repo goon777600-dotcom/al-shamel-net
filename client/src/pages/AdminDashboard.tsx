@@ -1009,7 +1009,9 @@ function AnnouncementManager() {
 
   const handleImageChange = (file?: File) => {
     if (!file) return;
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    const allowedExtensions = /\.(png|jpe?g|webp)$/i;
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name)) {
       toast.error("اختر صورة PNG أو JPEG أو WebP.");
       return;
     }
@@ -1054,21 +1056,35 @@ function AnnouncementManager() {
           <label className="block cursor-pointer rounded-2xl border border-dashed border-blue-300 bg-blue-50/70 p-3 transition hover:border-blue-500 hover:bg-blue-50">
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
               className="sr-only"
               onChange={event => handleImageChange(event.target.files?.[0])}
             />
             {imageDataUrl ? (
-              <div className="flex items-center gap-3">
-                <img
-                  src={imageDataUrl}
-                  alt="معاينة الإعلان"
-                  className="h-16 w-24 rounded-xl border border-blue-100 object-cover"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-black text-slate-900">{imageFileName}</span>
-                  <span className="mt-1 block text-xs text-slate-500">صورة جاهزة للرفع مع الإعلان. اضغط لتبديلها.</span>
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <img
+                    src={imageDataUrl}
+                    alt="معاينة الإعلان"
+                    className="h-16 w-24 shrink-0 rounded-xl border border-blue-100 object-cover"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-black text-slate-900">{imageFileName}</span>
+                    <span className="mt-1 block text-xs text-slate-500">صورة جاهزة للرفع مع الإعلان. اضغط لتبديلها.</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setImageDataUrl(null);
+                    setImageFileName("");
+                  }}
+                  className="shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
+                >
+                  إلغاء الصورة
+                </button>
               </div>
             ) : (
               <span className="flex items-center gap-3">
