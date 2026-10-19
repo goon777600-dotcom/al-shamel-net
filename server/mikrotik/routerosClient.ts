@@ -108,9 +108,12 @@ export class RouterosClient {
         if (!isSettled) {
           isSettled = true;
           this.destroy();
+          const isPrivate = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.|127\.|100\.100\.)/.test(host);
+          const isCloud = Boolean(process.env.RENDER || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production");
+          const cloudNote = (isPrivate && isCloud) ? " (الموقع يعمل على خادم سحابي ولا يمكنه الوصول للآي بي الداخلي مباشرة)" : "";
           reject(
             new Error(
-              `تعذر الاتصال بالميكروتك: انتهت مهلة الاتصال (${timeout / 1000} ثوانٍ) على ${host}:${port}. تأكد من صحة العنوان وتشغيل الجهاز.`
+              `تعذر الاتصال بالميكروتك: انتهت مهلة الاتصال (${timeout / 1000} ثوانٍ) على ${host}:${port}.${cloudNote} تأكد من صحة العنوان وتشغيل الجهاز.`
             )
           );
         }

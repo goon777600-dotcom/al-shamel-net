@@ -237,13 +237,20 @@ export async function testUserManagerConnection(customConfig?: {
       });
     }
 
+    const isPrivateIp = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.|127\.|100\.100\.)/.test(host);
+    const isCloud = Boolean(process.env.RENDER || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production");
+
+    let diagnosticHint = "تعذر الوصول لعنوان الميكروتك. تأكد من أن جهاز الكمبيوتر متصل بنفس شبكة الراوتر (100.100.100.1).";
+    if (isPrivateIp && isCloud) {
+      diagnosticHint = `تنبيه: أنت تستخدم عنوان آي بي محلي (${host}) بينما الموقع يعمل الآن على سيرفر سحابي على الإنترنت (Render). السيرفرات السحابية لا يمكنها الوصول لعنوان محلي داخل شبكتك المنزلية أو شبكة الواي فاي مباشرة. للحل: إما 1) استخدام رابط MikroTik Cloud DDNS (من IP -> Cloud في WinBox)، أو 2) عمل نفق (Tunnel) للبورت 8728، أو 3) تشغيل الموقع محلياً على جهاز كمبيوتر داخل شبكة الميكروتك.`;
+    }
+
     return {
       ok: false,
       httpWebOk: false,
       apiReady: false,
       message: err.message || "فشل الاتصال باليوزر مانجر",
-      diagnosticHint:
-        "تعذر الوصول لعنوان الميكروتك. تأكد من أن جهاز الكمبيوتر متصل بنفس شبكة الراوتر (100.100.100.1).",
+      diagnosticHint,
     };
   }
 }
