@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a2540"/>
+      <stop offset="100%" stop-color="#051329"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+  <circle cx="256" cy="256" r="210" stroke="url(#cyanGrad)" stroke-width="8" fill="none" opacity="0.3"/>
+  
+  <!-- Wi-Fi Waves -->
+  <path d="M120 180 A 190 190 0 0 1 392 180" fill="none" stroke="url(#cyanGrad)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M165 230 A 130 130 0 0 1 347 230" fill="none" stroke="url(#goldGrad)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M210 280 A 70 70 0 0 1 302 280" fill="none" stroke="url(#cyanGrad)" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="256" cy="340" r="26" fill="url(#goldGrad)"/>
+
+  <!-- Brand Typography -->
+  <text x="256" y="440" font-family="'Cairo', sans-serif" font-size="52" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="2">الشامل</text>
+</svg>

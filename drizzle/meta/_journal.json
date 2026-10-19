@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1783529751370,
+      "tag": "0000_nostalgic_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1783529888888,
+      "tag": "0001_uneven_salo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787057265847,
+      "tag": "0002_ordinary_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787058406844,
+      "tag": "0003_parallel_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787065295369,
+      "tag": "0004_fuzzy_puck",
+      "breakpoints": true
+    }
+  ]
+}
