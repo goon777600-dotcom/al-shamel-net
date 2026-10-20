@@ -116,3 +116,8 @@ client/public/__manus__/version.json
 # User uploads
 uploads/*
 !uploads/.gitkeep
+
+# Temporary build packages
+app-package.zip
+app-package/
+

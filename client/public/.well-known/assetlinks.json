@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.alshamel.net",
+        "sha256_cert_fingerprints": ["DA:67:2F:6A:75:3A:EB:8F:50:CE:C7:03:9E:79:78:9A:B0:C2:2E:EB:80:9A:2E:2D:2F:CA:57:63:CA:15:4C:6B"]
+      }
+    }]
