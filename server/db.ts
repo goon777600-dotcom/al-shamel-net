@@ -354,6 +354,18 @@ export async function setAnnouncementActive(id: number, isActive: boolean) {
   await db.update(announcements).set({ isActive: isActive ? 1 : 0 }).where(eq(announcements.id, id));
 }
 
+export async function updateAnnouncement(id: number, data: Partial<InsertAnnouncement>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(announcements).set(data).where(eq(announcements.id, id));
+}
+
+export async function deleteAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(announcements).where(eq(announcements.id, id));
+}
+
 // Get user wallet
 export async function getUserWallet(userId: number) {
   const db = await getDb();

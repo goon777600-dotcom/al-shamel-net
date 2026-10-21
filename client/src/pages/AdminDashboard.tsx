@@ -42,6 +42,7 @@ import {
   Bell,
   CreditCard,
   Landmark,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -958,6 +959,7 @@ function UserManagerSettings() {
 function AnnouncementManager() {
   const utils = trpc.useUtils();
   const { data: announcements = [], isLoading } = trpc.announcements.list.useQuery();
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [label, setLabel] = useState("عرض من الشامل نت");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -965,6 +967,17 @@ function AnnouncementManager() {
   const [tone, setTone] = useState<"gold" | "azure" | "emerald">("gold");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState("");
+
+  const resetForm = () => {
+    setEditingId(null);
+    setLabel("عرض من الشامل نت");
+    setTitle("");
+    setDescription("");
+    setCtaText("استكشف الباقات");
+    setTone("gold");
+    setImageDataUrl(null);
+    setImageFileName("");
+  };
 
   const uploadMutation = trpc.announcements.uploadImage.useMutation({
     onError: error => toast.error(error.message || "تعذر رفع صورة الإعلان."),
@@ -974,13 +987,30 @@ function AnnouncementManager() {
     onSuccess: async () => {
       await utils.announcements.list.invalidate();
       await utils.announcements.active.invalidate();
-      setTitle("");
-      setDescription("");
-      setImageDataUrl(null);
-      setImageFileName("");
-      toast.success("تمت إضافة الرسالة الإعلانية وستظهر في مقدمة المتجر.");
+      resetForm();
+      toast.success("تمت إضافة الرسالة الإعلانية بنجاح وستظهر في مقدمة المتجر.");
     },
     onError: error => toast.error(error.message || "تعذر حفظ الرسالة."),
+  });
+
+  const updateMutation = trpc.announcements.update.useMutation({
+    onSuccess: async () => {
+      await utils.announcements.list.invalidate();
+      await utils.announcements.active.invalidate();
+      resetForm();
+      toast.success("تم تحديث الإعلان وحفظ الإعدادات والصورة بنجاح في قاعدة البيانات.");
+    },
+    onError: error => toast.error(error.message || "تعذر تحديث الإعلان."),
+  });
+
+  const deleteMutation = trpc.announcements.delete.useMutation({
+    onSuccess: async () => {
+      await utils.announcements.list.invalidate();
+      await utils.announcements.active.invalidate();
+      if (editingId) resetForm();
+      toast.success("تم حذف الإعلان بنجاح.");
+    },
+    onError: error => toast.error(error.message || "تعذر حذف الإعلان."),
   });
 
   const activeMutation = trpc.announcements.setActive.useMutation({
@@ -991,6 +1021,18 @@ function AnnouncementManager() {
     onError: error => toast.error(error.message || "تعذر تحديث حالة الرسالة."),
   });
 
+  const handleEdit = (announcement: typeof announcements[0]) => {
+    setEditingId(announcement.id);
+    setLabel(announcement.label);
+    setTitle(announcement.title);
+    setDescription(announcement.description);
+    setCtaText(announcement.ctaText);
+    setTone(announcement.tone as any);
+    setImageDataUrl(announcement.imageUrl || null);
+    setImageFileName(announcement.imageUrl ? "الصورة المحفوظة الحالية" : "");
+    document.getElementById("announcement-manager")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!title.trim() || !description.trim()) {
@@ -998,15 +1040,43 @@ function AnnouncementManager() {
       return;
     }
     try {
-      const imageUrl = imageDataUrl
-        ? (await uploadMutation.mutateAsync({ fileName: imageFileName || "announcement", dataUrl: imageDataUrl })).url
-        : undefined;
-      createMutation.mutate({ label, title, description, ctaText, tone, imageUrl });
+      let finalImageUrl = imageDataUrl || undefined;
+
+      // If user uploaded a new dataUrl
+      if (imageDataUrl && imageDataUrl.startsWith("data:") && imageFileName !== "الصورة المحفوظة الحالية") {
+        const uploadRes = await uploadMutation.mutateAsync({
+          fileName: imageFileName || "announcement",
+          dataUrl: imageDataUrl,
+        });
+        finalImageUrl = uploadRes.url;
+      }
+
+      if (editingId) {
+        updateMutation.mutate({
+          id: editingId,
+          label,
+          title,
+          description,
+          ctaText,
+          tone,
+          imageUrl: finalImageUrl,
+        });
+      } else {
+        createMutation.mutate({
+          label,
+          title,
+          description,
+          ctaText,
+          tone,
+          imageUrl: finalImageUrl,
+        });
+      }
     } catch {
       // Handled in onError
     }
   };
 
+  // Client-side image compression: max 1200px, JPEG quality 0.85
   const handleImageChange = (file?: File) => {
     if (!file) return;
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
@@ -1015,14 +1085,42 @@ function AnnouncementManager() {
       toast.error("اختر صورة PNG أو JPEG أو WebP.");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error("يجب ألا يتجاوز حجم الصورة 3 ميغابايت.");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("يجب ألا يتجاوز حجم الصورة 8 ميغابايت.");
       return;
     }
+
     const reader = new FileReader();
-    reader.onload = () => {
-      setImageDataUrl(String(reader.result));
-      setImageFileName(file.name);
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          setImageDataUrl(compressed);
+          setImageFileName(file.name);
+        } else {
+          setImageDataUrl(String(reader.result));
+          setImageFileName(file.name);
+        }
+      };
+      img.src = String(e.target?.result);
     };
     reader.readAsDataURL(file);
   };
@@ -1046,10 +1144,27 @@ function AnnouncementManager() {
           <div className="rounded-2xl bg-[#071f43] p-3 text-amber-200">
             <Megaphone className="h-6 w-6" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-xs font-black tracking-[0.14em] text-amber-700">STORE CONTENT</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">أضف إعلاناً جديداً</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">سيظهر أعلى الباقات للعميل مع عروض الشبكة الحالية.</p>
+            <div className="flex items-center justify-between">
+              <h2 className="mt-1 text-xl font-black text-slate-950">
+                {editingId ? "تعديل الإعلان وحفظه" : "أضف إعلاناً جديداً"}
+              </h2>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                >
+                  إلغاء التعديل
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {editingId
+                ? "يمكنك تعديل النصوص أو استبدال الصورة أو الاحتفاظ بها مع حفظ الإعدادات بأمان."
+                : "سيظهر أعلى الباقات للعميل مع عروض الشبكة الحالية."}
+            </p>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -1069,8 +1184,8 @@ function AnnouncementManager() {
                     className="h-16 w-24 shrink-0 rounded-xl border border-blue-100 object-cover"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-black text-slate-900">{imageFileName}</span>
-                    <span className="mt-1 block text-xs text-slate-500">صورة جاهزة للرفع مع الإعلان. اضغط لتبديلها.</span>
+                    <span className="block truncate text-sm font-black text-slate-900">{imageFileName || "صورة الإعلان"}</span>
+                    <span className="mt-1 block text-xs text-slate-500">الصورة محفوظة في قاعدة البيانات. اضغط لتغييرها.</span>
                   </span>
                 </div>
                 <button
@@ -1093,7 +1208,7 @@ function AnnouncementManager() {
                 </span>
                 <span>
                   <span className="block text-sm font-black text-slate-900">أضف صورة اختيارية للإعلان</span>
-                  <span className="mt-1 block text-xs text-slate-500">PNG أو JPEG أو WebP، بحد أقصى 3 ميغابايت.</span>
+                  <span className="mt-1 block text-xs text-slate-500">PNG أو JPEG أو WebP - تُحفظ مباشرة في قاعدة البيانات ولن تختفي أبداً.</span>
                 </span>
               </span>
             )}
@@ -1163,11 +1278,15 @@ function AnnouncementManager() {
           </div>
           <Button
             type="submit"
-            disabled={createMutation.isPending || uploadMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending || uploadMutation.isPending}
             className="h-11 w-full bg-blue-700 font-black hover:bg-blue-800"
           >
-            {createMutation.isPending || uploadMutation.isPending ? (
+            {createMutation.isPending || updateMutation.isPending || uploadMutation.isPending ? (
               "جارٍ الحفظ…"
+            ) : editingId ? (
+              <>
+                <Save className="ml-2 h-4 w-4" /> حفظ التعديلات
+              </>
             ) : (
               <>
                 <Plus className="ml-2 h-4 w-4" /> نشر الرسالة في المتجر
@@ -1221,16 +1340,40 @@ function AnnouncementManager() {
                     <p className="mt-1 line-clamp-1 text-xs text-slate-500">{announcement.description}</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => activeMutation.mutate({ id: announcement.id, isActive: !announcement.isActive })}
-                  disabled={activeMutation.isPending}
-                  className="shrink-0 border-blue-200 bg-white text-blue-800 hover:bg-blue-50"
-                >
-                  <Power className="ml-2 h-4 w-4" />
-                  {announcement.isActive ? "إيقاف" : "تفعيل"}
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(announcement)}
+                    className="border-amber-200 bg-amber-50/70 text-amber-900 hover:bg-amber-100"
+                  >
+                    <Pencil className="ml-1.5 h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => activeMutation.mutate({ id: announcement.id, isActive: !announcement.isActive })}
+                    disabled={activeMutation.isPending}
+                    className="border-blue-200 bg-white text-blue-800 hover:bg-blue-50"
+                  >
+                    <Power className="ml-1.5 h-3.5 w-3.5" />
+                    {announcement.isActive ? "إيقاف" : "تفعيل"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("هل تريد بالتأكيد حذف هذا الإعلان نهائياً؟")) {
+                        deleteMutation.mutate({ id: announcement.id });
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

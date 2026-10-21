@@ -120,4 +120,5 @@ uploads/*
 # Temporary build packages
 app-package.zip
 app-package/
+android-release/
 

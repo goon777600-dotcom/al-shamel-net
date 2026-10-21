@@ -29,6 +29,8 @@ import {
   createPackageFromAdmin,
   clonePackageFromAdmin,
   createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
   getActiveAnnouncements,
   getAllAnnouncements,
   setAnnouncementActive,
@@ -325,40 +327,45 @@ export const appRouter = router({
         description: z.string().trim().min(3).max(280),
         ctaText: z.string().trim().min(2).max(50),
         tone: z.enum(["gold", "azure", "emerald"]),
-        imageUrl: z.string().max(500).optional(),
+        imageUrl: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         await createAnnouncement({ ...input, isActive: 1, sortOrder: 0 });
         return { success: true } as const;
       }),
+    update: adminProcedure
+      .input(z.object({
+        id: z.number().int().positive(),
+        label: z.string().trim().min(2).max(60),
+        title: z.string().trim().min(3).max(140),
+        description: z.string().trim().min(3).max(280),
+        ctaText: z.string().trim().min(2).max(50),
+        tone: z.enum(["gold", "azure", "emerald"]),
+        imageUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateAnnouncement(id, data);
+        return { success: true } as const;
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        await deleteAnnouncement(input.id);
+        return { success: true } as const;
+      }),
     uploadImage: adminProcedure
       .input(z.object({
         fileName: z.string().trim().min(1).max(160),
-        dataUrl: z.string().max(4_300_000),
+        dataUrl: z.string().max(8_000_000),
       }))
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
         const match = input.dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([\s\S]+)$/);
         if (!match) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "يُسمح بصور PNG أو JPEG أو WebP فقط." });
         }
-
-        const [, mimeType, rawBase64] = match;
-        const image = Buffer.from(rawBase64.replace(/\s+/g, ""), "base64");
-        if (!image.length || image.length > 3 * 1024 * 1024) {
-          throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "يجب ألا يتجاوز حجم الصورة 3 ميغابايت." });
-        }
-
-        const isPng = (mimeType === "image/png" && image.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
-        const isJpeg = ((mimeType === "image/jpeg" || mimeType === "image/jpg") && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff);
-        const isWebp = (mimeType === "image/webp" && image.subarray(0, 4).toString() === "RIFF" && image.subarray(8, 12).toString() === "WEBP");
-
-        if (!isPng && !isJpeg && !isWebp) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "تعذر التحقق من صيغة الصورة." });
-        }
-
-        const extension = isPng ? "png" : isWebp ? "webp" : "jpg";
-        const { url } = await storagePut(`announcements/${ctx.user.id}/${nanoid(12)}.${extension}`, image, mimeType);
-        return { url };
+        // Return dataUrl directly so it is stored permanently in the cloud database!
+        return { url: input.dataUrl };
       }),
     setActive: adminProcedure
       .input(z.object({ id: z.number().int().positive(), isActive: z.boolean() }))

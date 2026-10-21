@@ -83,7 +83,7 @@ export const announcements = mysqlTable("announcements", {
   title: varchar("title", { length: 140 }).notNull(),
   description: varchar("description", { length: 280 }).notNull(),
   ctaText: varchar("ctaText", { length: 50 }).notNull().default("استكشف الباقات"),
-  imageUrl: varchar("imageUrl", { length: 500 }),
+  imageUrl: text("imageUrl"),
   tone: mysqlEnum("tone", ["gold", "azure", "emerald"]).default("gold").notNull(),
   isActive: int("isActive").default(1).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
