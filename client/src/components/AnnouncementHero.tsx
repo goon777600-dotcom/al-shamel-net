@@ -80,9 +80,18 @@ export default function AnnouncementHero({ onAction }: { onAction: (ctaText: str
         </div>
       </div>
       {current.imageUrl && (
-        <div className="absolute left-5 top-5 h-16 w-20 overflow-hidden rounded-xl border border-white/25 bg-white/10 p-1 shadow-2xl shadow-blue-950/35 sm:bottom-5 sm:top-5 sm:h-auto sm:w-52 sm:rounded-2xl sm:p-1.5">
-          <img src={current.imageUrl} alt={current.title} className="h-full w-full rounded-xl object-cover" />
-          <div className="pointer-events-none absolute inset-x-1.5 bottom-1.5 hidden rounded-b-xl bg-gradient-to-t from-[#061a37]/75 to-transparent px-3 pb-3 pt-9 text-[11px] font-black text-white sm:block">عرض الشامل نت</div>
+        <div className="announcement-image-wrapper absolute left-5 top-5 h-16 w-20 overflow-hidden rounded-xl border border-white/25 bg-white/10 p-1 shadow-2xl shadow-blue-950/35 sm:bottom-5 sm:top-5 sm:h-auto sm:w-52 sm:rounded-2xl sm:p-1.5">
+          <img
+            src={current.imageUrl}
+            alt={current.title}
+            onError={e => {
+              (e.currentTarget.closest(".announcement-image-wrapper") as HTMLElement)?.style.setProperty("display", "none");
+            }}
+            className="h-full w-full rounded-xl object-cover"
+          />
+          <div className="pointer-events-none absolute inset-x-1.5 bottom-1.5 hidden rounded-b-xl bg-gradient-to-t from-[#061a37]/75 to-transparent px-3 pb-3 pt-9 text-[11px] font-black text-white sm:block">
+            {current.label || "عرض الشامل نت"}
+          </div>
         </div>
       )}
       <Wifi className={`absolute bottom-7 left-7 h-10 w-10 opacity-20 ${style.icon}`} />
