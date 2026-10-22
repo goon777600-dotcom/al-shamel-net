@@ -77,7 +77,6 @@ export default function Store() {
 
   const { data: packages = [], isLoading: packagesLoading } = trpc.packages.getByCategory.useQuery(category);
   const { data: wallet } = trpc.wallet.getBalance.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: userPurchases = [] } = trpc.purchases.getUserPurchases.useQuery(undefined, { enabled: Boolean(user) });
 
   const buyMutation = trpc.purchases.buyPackage.useMutation({
     onSuccess: data => {
@@ -279,60 +278,6 @@ export default function Store() {
           </div>
         ) : (
           <>
-            {/* Quick Active Card Banner */}
-            {user && userPurchases.length > 0 && userPurchases[0] && (
-              <div className="mb-6 overflow-hidden rounded-2xl border border-amber-300/80 bg-gradient-to-l from-amber-50 via-white to-blue-50 p-4 shadow-md shadow-blue-950/5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-md">
-                      <Zap className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-black text-amber-800">⚡ كرتك النشط الأخير:</span>
-                        <span className="font-mono text-base font-black tracking-widest text-slate-950 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200 shadow-xs">
-                          {userPurchases[0].pinCode}
-                        </span>
-                        <span className="text-xs font-bold text-slate-600">({userPurchases[0].packageName})</span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        اضغط للاتصال الفوري بالشبكة دون الحاجة لكتابة الكود يدوياً
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        try {
-                          navigator.clipboard?.writeText(userPurchases[0].pinCode);
-                        } catch {}
-                        toast.success("تم نسخ رمز الكرت بنجاح!");
-                      }}
-                      className="border-amber-300 bg-white font-bold text-xs text-slate-800 hover:bg-amber-50 shadow-xs cursor-pointer"
-                    >
-                      <Copy className="ml-1 h-3.5 w-3.5" /> نسخ
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        try {
-                          navigator.clipboard?.writeText(userPurchases[0].pinCode);
-                        } catch {}
-                        toast.success("تم نسخ كود الدخول، جاري فتح بوابة الشبكة...");
-                        const target = `http://100.100.100.1/login?username=${encodeURIComponent(userPurchases[0].pinCode)}&password=${encodeURIComponent(userPurchases[0].cardPassword || userPurchases[0].pinCode)}`;
-                        window.open(target, "_blank");
-                      }}
-                      className="bg-blue-700 text-white font-black text-xs hover:bg-blue-800 shadow-md cursor-pointer transition active:scale-95"
-                    >
-                      <Wifi className="ml-1.5 h-3.5 w-3.5" /> اتصال فوري بالشبكة
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <AnnouncementHero onAction={handleAnnouncementAction} />
 
             {!user && <LoginCard />}
