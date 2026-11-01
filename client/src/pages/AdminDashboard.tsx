@@ -159,9 +159,10 @@ function AdminGate({ onBack }: { onBack: () => void }) {
 }
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [, navigate] = useLocation();
   const [period, setPeriod] = useState<"today" | "week" | "month" | "all">("today");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { data: overview, isLoading, refetch, isFetching } = trpc.admin.overview.useQuery(period, {
     enabled: user?.role === "admin",
   });
@@ -169,9 +170,18 @@ export default function AdminDashboard() {
     enabled: user?.role === "admin",
   });
 
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => navigate("/"),
-  });
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/");
+      toast.success("تم تسجيل الخروج بنجاح.");
+    } catch {
+      navigate("/");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -282,11 +292,11 @@ export default function AdminDashboard() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-              className="border-white/25 bg-white/10 text-white hover:bg-rose-500 hover:text-white"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="border-white/25 bg-white/10 text-white hover:bg-rose-500 hover:text-white cursor-pointer"
             >
-              <LogOut className="ml-2 h-4 w-4" /> خروج
+              <LogOut className="ml-2 h-4 w-4" /> {isLoggingOut ? "جاري الخروج..." : "خروج"}
             </Button>
           </div>
         </header>

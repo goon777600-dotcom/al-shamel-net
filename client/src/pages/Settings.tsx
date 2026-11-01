@@ -29,7 +29,21 @@ export default function Settings() {
 
     <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">{rows.map(({ icon: Icon, title, text, onClick, tone }) => <button key={title} type="button" onClick={onClick} className="flex w-full items-center gap-3 border-b border-slate-100 p-4 text-right transition last:border-0 hover:bg-slate-50"><span className={`rounded-2xl p-2.5 ${tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block font-black text-slate-900">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{text}</span></span><ChevronLeft className="h-4 w-4 text-slate-300" /></button>)}</Card>
 
-    <Button variant="outline" onClick={() => logout()} className="mt-5 w-full border-rose-200 bg-white text-rose-700 hover:bg-rose-50"><LogOut className="ml-2 h-4 w-4" />تسجيل الخروج من الحساب</Button>
+    <Button
+      variant="outline"
+      onClick={async () => {
+        try {
+          await logout();
+          toast.success("تم تسجيل الخروج بنجاح.");
+          navigate("/");
+        } catch {
+          navigate("/");
+        }
+      }}
+      className="mt-5 w-full border-rose-200 bg-white text-rose-700 hover:bg-rose-50 cursor-pointer"
+    >
+      <LogOut className="ml-2 h-4 w-4" /> تسجيل الخروج من الحساب
+    </Button>
     <p className="mt-5 flex items-center justify-center gap-1 text-center text-xs text-slate-500"><Smartphone className="h-3.5 w-3.5" /> الشامل نت · تجربة هاتف آمنة</p>
   </div></main>;
 }

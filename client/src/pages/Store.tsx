@@ -54,10 +54,11 @@ const packageStyle = {
 } as const;
 
 export default function Store() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [adminView, setAdminView] = React.useState<"usermanager" | "store">("store");
   const [category, setCategory] = React.useState<"card" | "subscription">("card");
   const [selectedPackage, setSelectedPackage] = React.useState<number | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   React.useEffect(() => {
     const handleAdminLogin = () => setAdminView("usermanager");
@@ -99,12 +100,18 @@ export default function Store() {
     },
   });
 
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setAdminView("store");
       toast.success("تم تسجيل الخروج بنجاح.");
-      void utils.auth.me.invalidate();
-    },
-  });
+    } catch {
+      toast.success("تم تسجيل الخروج.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleBuyClick = (packageId: number) => {
     if (!user) {
@@ -252,11 +259,11 @@ export default function Store() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-                className="border-slate-300 text-slate-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="border-slate-300 text-slate-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
               >
-                <LogOut className="ml-1.5 h-4 w-4" /> خروج
+                <LogOut className="ml-1.5 h-4 w-4" /> {isLoggingOut ? "جاري الخروج..." : "خروج"}
               </Button>
             </div>
           </div>

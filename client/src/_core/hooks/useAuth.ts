@@ -2,6 +2,7 @@ import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
+import { COOKIE_NAME } from "@shared/const";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -35,20 +36,28 @@ export function useAuth(options?: UseAuthOptions) {
         error instanceof TRPCClientError &&
         error.data?.code === "UNAUTHORIZED"
       ) {
-        return;
+        // already unauthenticated
+      } else {
+        console.warn("[Auth] Logout remote error:", error);
       }
-      throw error;
     } finally {
-      // Clear the Preview auto-login token mirrored into sessionStorage, so
-      // header-based sessions (Safari ITP / WebView) are logged out too. The
-      // backend cookie is cleared by the logout mutation.
+      // Clear all tokens mirrored into storage so header-based and cookie sessions are both destroyed
       try {
         sessionStorage.removeItem("auth_token");
         localStorage.removeItem("auth_token");
         sessionStorage.removeItem("manus-cookie");
         localStorage.removeItem("manus-cookie");
+        localStorage.removeItem("manus-runtime-user-info");
+        sessionStorage.clear();
+        document.cookie = `${COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+        document.cookie = `${COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax;`;
+        document.cookie = `${COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure;`;
       } catch {}
       utils.auth.me.setData(undefined, null);
+      try {
+        utils.wallet.getBalance.setData(undefined, { balance: "0", totalSpent: "0", totalTopUp: "0" } as any);
+        utils.purchases.getUserPurchases.setData(undefined, []);
+      } catch {}
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);

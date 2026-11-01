@@ -21,6 +21,19 @@ export interface TestResult {
 /**
  * Check if User Manager web interface (HTTP /userman) is reachable
  */
+export function getUserManagerConfig() {
+  const baseUrl = process.env.USERMANAGER_API_BASE_URL;
+  const token = process.env.USERMANAGER_API_TOKEN;
+  if (!baseUrl || !token || !baseUrl.startsWith("https://")) {
+    return null;
+  }
+  return {
+    baseUrl,
+    token,
+    timeoutMs: 8000,
+  };
+}
+
 export async function checkHttpUserman(rawHost: string): Promise<{
   ok: boolean;
   version?: string;
