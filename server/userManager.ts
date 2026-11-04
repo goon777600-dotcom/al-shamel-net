@@ -224,10 +224,17 @@ export async function testUserManagerConnection(customConfig?: {
           apiReady: false,
           identity: `MikroTik (${host})`,
           version: httpCheck.version || "6.48.6",
-          message: `تم الاتصال بنجاح بمنفذ الـ API (8728) وصفحة اليوزرمانجر! متبقي فقط كتابة كلمة سر Winbox لحساب (${user}).`,
+          message: `تم الاتصال بنجاح بمنفذ الـ API (${port}) وصفحة اليوزرمانجر! متبقي فقط كتابة كلمة سر Winbox لحساب (${user}).`,
           diagnosticHint:
-            `منفذ الـ API مفتوح والراوتر استقبل الاتصال بنجاح ✅! أدخل كلمة السر التي تستخدمها للدخول إلى Winbox في خانة "🔑 كلمة سر راوتر الميكروتك (Winbox)" واضغط حفظ.`,
+            `منفذ الـ API مفتوح والراوتر استقبل الاتصال بنجاح على المنفذ (${port}) ✅! ولكن المايكروتك رفض كلمة المرور لحساب (${user}). تأكد من أن حساب (${user}) مضاف في Winbox تحت (System -> Users) بصلاحية full، واكتب نفس كلمة مروره هنا.`,
         };
+      }
+
+      let diagnosticHint =
+        "صفحة اليوزرمانجر بالمتصفح تعمل 100%. لإنشاء الكرت الفردي آلياً داخل اليوزرمانجر لحظة شراء العميل، فقط اضغط في Winbox على IP -> Services -> api واضغط تفعيل (Checkmark).";
+      if (port === 12861 || host.includes(":12861")) {
+        diagnosticHint =
+          "صفحة المتصفح (12861) تعمل 100%! ولكن 12861 هو منفذ المتصفح (Web)، بينما منفذ الـ API في النفق هو 12862. يرجى كتابة 12862 في خانة منفذ الـ API.";
       }
 
       return {
@@ -237,8 +244,7 @@ export async function testUserManagerConnection(customConfig?: {
         identity: `MikroTik (اليوزرمانجر Web)`,
         version: httpCheck.version || "6.48.6",
         message: `تم الاتصال بنجاح بصفحة اليوزرمانجر (Web) على ${host} - إصدار RouterOS ${httpCheck.version || "6.48.6"}.`,
-        diagnosticHint:
-          "صفحة اليوزرمانجر بالمتصفح تعمل 100%. لإنشاء الكرت الفردي آلياً داخل اليوزرمانجر لحظة شراء العميل، فقط اضغط في Winbox على IP -> Services -> api واضغط تفعيل (Checkmark).",
+        diagnosticHint,
       };
     }
 

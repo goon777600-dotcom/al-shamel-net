@@ -114,9 +114,18 @@ export default function Store() {
   };
 
   const handleBuyClick = (packageId: number) => {
+    if (buyMutation.isPending) return;
+
     if (!user) {
       toast.error("سجّل الدخول أولاً لإتمام شراء الباقة.");
       document.querySelector(".shamel-auth-card")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const pkg = packages?.find(p => p.id === packageId);
+    if (pkg && wallet && Number(wallet.balance) < Number(pkg.price)) {
+      toast.error("رصيدك الحالي غير كافٍ لهذه الباقة. يرجى شحن المحفظة أولاً.");
+      setTopUpOpen(true);
       return;
     }
 
@@ -349,6 +358,30 @@ export default function Store() {
 
         <TopUpModal open={topUpOpen} onOpenChange={setTopUpOpen} />
 
+        {/* Full-screen Loading Overlay during Purchase */}
+        {buyMutation.isPending && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="flex max-w-sm w-full flex-col items-center rounded-3xl border border-blue-400/30 bg-slate-900/95 p-7 text-center shadow-2xl shadow-blue-950/50">
+              <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 via-emerald-500 to-amber-400 p-0.5 shadow-lg shadow-blue-500/20">
+                <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-slate-900">
+                  <Loader2 className="h-8 w-8 animate-spin text-amber-300" />
+                </div>
+              </div>
+              <h3 className="text-lg font-black text-white">جارٍ إنشاء كرتك وتفعيله...</h3>
+              <p className="mt-2 text-xs font-bold leading-relaxed text-slate-300">
+                يتم الآن الاتصال بالسيرفر وتوليد الكرت آلياً في المايكروتك بالبروفايل المختار.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-blue-950/80 px-4 py-2 border border-blue-800/40 text-[11px] font-black text-amber-200">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                يستغرق ثوانٍ معدودة، يرجى الانتظار
+              </div>
+            </div>
+          </div>
+        )}
+
         {user && successData && (
           <PurchaseSuccessModal
             open={successOpen}
@@ -426,7 +459,7 @@ function PackageList({ packages, isLoading, selectedPackage, isBuying, onBuy, fo
               {formatPrice(pkg.price)} <span className="text-sm text-slate-600">ر.ي</span>
             </p>
           </div>
-          <Button onClick={() => onBuy(pkg.id)} disabled={isThisPackageBuying} className={`min-w-28 shadow-sm ${style.button}`}>
+          <Button onClick={() => onBuy(pkg.id)} disabled={isBuying} className={`min-w-28 shadow-sm ${style.button}`}>
             {isThisPackageBuying ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" />جارٍ التنفيذ</> : actionLabel}
           </Button>
         </div>

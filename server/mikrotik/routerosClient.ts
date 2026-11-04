@@ -158,6 +158,9 @@ export class RouterosClient {
                 isSettled = true;
                 clearTimeout(timer);
                 this.connected = true;
+                if (this.socket && "setNoDelay" in this.socket) {
+                  this.socket.setNoDelay(true);
+                }
                 this.setupDataHandler();
                 resolve();
               }
@@ -175,6 +178,9 @@ export class RouterosClient {
                 isSettled = true;
                 clearTimeout(timer);
                 this.connected = true;
+                if (this.socket && "setNoDelay" in this.socket) {
+                  this.socket.setNoDelay(true);
+                }
                 this.setupDataHandler();
                 resolve();
               }
@@ -504,6 +510,7 @@ export class RouterosClient {
 
     if (mode === "v6") {
       // v6: /tool/user-manager/user/add
+      // In User Manager v6, limits are governed by the profile. Passing uptime-limit to user/add causes 'unknown parameter' error.
       const params: Record<string, string> = {
         customer,
         username: card.username,
@@ -511,30 +518,8 @@ export class RouterosClient {
         "shared-users": "1",
       };
       if (card.comment) params["comment"] = card.comment;
-      if (card.timeLimit && card.timeLimit.toLowerCase() !== "unlimited") {
-        params["uptime-limit"] = card.timeLimit;
-      }
-      if (card.dataLimitBytes && card.dataLimitBytes > 0) {
-        params["transfer-limit"] = card.dataLimitBytes.toString();
-      }
 
-      try {
-        await this.runCommand("/tool/user-manager/user/add", params);
-      } catch (err: any) {
-        // Fallback: If extra limit parameters failed on older router versions, add basic user
-        if (params["uptime-limit"] || params["transfer-limit"]) {
-          const fallbackParams: Record<string, string> = {
-            customer,
-            username: card.username,
-            password,
-            "shared-users": "1",
-          };
-          if (card.comment) fallbackParams["comment"] = card.comment;
-          await this.runCommand("/tool/user-manager/user/add", fallbackParams);
-        } else {
-          throw err;
-        }
-      }
+      await this.runCommand("/tool/user-manager/user/add", params);
 
       // If a profile is specified, create and activate it for this user
       if (card.profileName) {

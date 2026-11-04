@@ -412,6 +412,8 @@ export const appRouter = router({
       }),
   }),
 
+const inFlightPurchases = new Set<number>();
+
   purchases: router({
     buyPackage: protectedProcedure
       .input(
@@ -420,83 +422,116 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const wallet = await getOrCreateWallet(ctx.user.id);
-        if (!wallet) throw new Error("Failed to get wallet");
-
-        const allPackages = await getActivePackages();
-        const pkg = allPackages.find((p) => p.id === input.packageId);
-        if (!pkg) throw new Error("Package not found");
-
-        const currentBalance = parseFloat(wallet.balance);
-        const packagePrice = parseFloat(pkg.price);
-
-        if (currentBalance < packagePrice) {
-          throw new Error("رصيدك الحالي غير كافٍ لإتمام عملية الشراء. يرجى شحن المحفظة أولاً.");
-        }
-
-        // Create card directly in MikroTik User Manager / Hotspot
-        const cardResult = await createCardDirectlyInUserManager({
-          packageId: pkg.id,
-          packageName: pkg.name,
-          routerProfileName: pkg.routerProfileName,
-          timeLimit: pkg.timeLimit,
-          dataLimit: pkg.dataLimit,
-          userId: ctx.user.id,
-        });
-
-        const newBalance = (currentBalance - packagePrice).toFixed(2);
-        const newTotalSpent = (parseFloat(wallet.totalSpent) + packagePrice).toFixed(2);
-
-        await createPurchase({
-          userId: ctx.user.id,
-          packageId: input.packageId,
-          pinCode: cardResult.pinCode,
-          cardPassword: cardResult.cardPassword,
-          amount: pkg.price,
-          status: "completed",
-          routerResponse: cardResult.routerMessage,
-        });
-
-        await updateWalletBalance(ctx.user.id, newBalance);
-
-        await createTransaction({
-          userId: ctx.user.id,
-          type: "purchase",
-          amount: pkg.price,
-          description: `شراء ${pkg.name}`,
-          balanceBefore: wallet.balance,
-          balanceAfter: newBalance,
-        });
-
-        // Notify admin of purchase
-        try {
-          await createNotification({
-            type: "purchase",
-            title: "🛒 عملية شراء باقة كرت",
-            content: `اشترى العميل (${ctx.user.name || "عميل"}) باقة (${pkg.name}) بمبلغ ${pkg.price} ر.ي - كرت رقم: ${cardResult.pinCode}`,
-            data: JSON.stringify({
-              userId: ctx.user.id,
-              userName: ctx.user.name,
-              packageName: pkg.name,
-              amount: pkg.price,
-              pinCode: cardResult.pinCode,
-            }),
+        if (inFlightPurchases.has(ctx.user.id)) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "طلبك قيد المعالجة والتفعيل الآن في المايكروتك... يرجى الانتظار بضع ثوانٍ.",
           });
-        } catch (e) {
-          console.warn("Could not create notification for purchase:", e);
         }
+        inFlightPurchases.add(ctx.user.id);
 
-        return {
-          success: true,
-          pinCode: cardResult.pinCode,
-          cardPassword: cardResult.cardPassword,
-          packageName: pkg.name,
-          syncedToRouter: cardResult.syncedToRouter,
-          routerMessage: cardResult.routerMessage,
-          loginUrl: cardResult.loginUrl,
-          newBalance,
-          newTotalSpent,
-        };
+        try {
+          const wallet = await getOrCreateWallet(ctx.user.id);
+          if (!wallet) throw new Error("Failed to get wallet");
+
+          const allPackages = await getActivePackages();
+          const pkg = allPackages.find((p) => p.id === input.packageId);
+          if (!pkg) throw new Error("Package not found");
+
+          // Anti-duplicate protection: check if same package was purchased in last 8 seconds
+          const recentPurchases = await getUserPurchases(ctx.user.id);
+          const duplicated = recentPurchases.find(
+            (p) =>
+              p.packageId === input.packageId &&
+              Date.now() - new Date(p.createdAt).getTime() < 8000
+          );
+          if (duplicated) {
+            return {
+              success: true,
+              pinCode: duplicated.pinCode,
+              cardPassword: duplicated.cardPassword,
+              packageName: pkg.name,
+              syncedToRouter: true,
+              routerMessage: duplicated.routerResponse || "تم إنشاء الكرت وتفعيله بنجاح",
+              loginUrl: "http://100.100.100.1",
+              newBalance: wallet.balance,
+              newTotalSpent: wallet.totalSpent,
+            };
+          }
+
+          const currentBalance = parseFloat(wallet.balance);
+          const packagePrice = parseFloat(pkg.price);
+
+          if (currentBalance < packagePrice) {
+            throw new Error("رصيدك الحالي غير كافٍ لإتمام عملية الشراء. يرجى شحن المحفظة أولاً.");
+          }
+
+          // Create card directly in MikroTik User Manager / Hotspot
+          const cardResult = await createCardDirectlyInUserManager({
+            packageId: pkg.id,
+            packageName: pkg.name,
+            routerProfileName: pkg.routerProfileName,
+            timeLimit: pkg.timeLimit,
+            dataLimit: pkg.dataLimit,
+            userId: ctx.user.id,
+          });
+
+          const newBalance = (currentBalance - packagePrice).toFixed(2);
+          const newTotalSpent = (parseFloat(wallet.totalSpent) + packagePrice).toFixed(2);
+
+          await createPurchase({
+            userId: ctx.user.id,
+            packageId: input.packageId,
+            pinCode: cardResult.pinCode,
+            cardPassword: cardResult.cardPassword,
+            amount: pkg.price,
+            status: "completed",
+            routerResponse: cardResult.routerMessage,
+          });
+
+          await updateWalletBalance(ctx.user.id, newBalance);
+
+          await createTransaction({
+            userId: ctx.user.id,
+            type: "purchase",
+            amount: pkg.price,
+            description: `شراء ${pkg.name}`,
+            balanceBefore: wallet.balance,
+            balanceAfter: newBalance,
+          });
+
+          // Notify admin of purchase
+          try {
+            await createNotification({
+              type: "purchase",
+              title: "🛒 عملية شراء باقة كرت",
+              content: `اشترى العميل (${ctx.user.name || "عميل"}) باقة (${pkg.name}) بمبلغ ${pkg.price} ر.ي - كرت رقم: ${cardResult.pinCode}`,
+              data: JSON.stringify({
+                userId: ctx.user.id,
+                userName: ctx.user.name,
+                packageName: pkg.name,
+                amount: pkg.price,
+                pinCode: cardResult.pinCode,
+              }),
+            });
+          } catch (e) {
+            console.warn("Could not create notification for purchase:", e);
+          }
+
+          return {
+            success: true,
+            pinCode: cardResult.pinCode,
+            cardPassword: cardResult.cardPassword,
+            packageName: pkg.name,
+            syncedToRouter: cardResult.syncedToRouter,
+            routerMessage: cardResult.routerMessage,
+            loginUrl: cardResult.loginUrl,
+            newBalance,
+            newTotalSpent,
+          };
+        } finally {
+          inFlightPurchases.delete(ctx.user.id);
+        }
       }),
     getUserPurchases: protectedProcedure.query(async ({ ctx }) => {
       return await getUserPurchases(ctx.user.id);
@@ -532,7 +567,15 @@ export const appRouter = router({
         z.object({
           name: z.string().trim().max(120).optional(),
           host: z.string().trim().min(3).max(255),
-          apiPort: z.coerce.number().int().min(1).max(65535).default(8728),
+          apiPort: z.preprocess((val) => {
+            if (typeof val === "number" && !isNaN(val)) return val;
+            if (typeof val === "string") {
+              const normalized = val.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+              const n = parseInt(normalized, 10);
+              if (!isNaN(n) && n > 0 && n <= 65535) return n;
+            }
+            return 8728;
+          }, z.number().int().min(1).max(65535)).default(8728),
           username: z.string().trim().min(1).max(100),
           password: z.string().max(255).optional(),
           customerPassword: z.string().max(255).optional(),
@@ -550,7 +593,15 @@ export const appRouter = router({
       .input(
         z.object({
           host: z.string().trim().optional(),
-          apiPort: z.coerce.number().int().optional(),
+          apiPort: z.preprocess((val) => {
+            if (typeof val === "number" && !isNaN(val)) return val;
+            if (typeof val === "string") {
+              const normalized = val.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+              const n = parseInt(normalized, 10);
+              if (!isNaN(n) && n > 0 && n <= 65535) return n;
+            }
+            return undefined;
+          }, z.number().int().optional()).optional(),
           username: z.string().trim().optional(),
           password: z.string().optional(),
           useTls: z.boolean().optional(),

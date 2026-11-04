@@ -15,6 +15,14 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+const toWesternDigits = (val: string | number): number => {
+  if (typeof val === "number") return isNaN(val) ? 8728 : val;
+  const str = String(val).trim();
+  const normalized = str.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+  const num = parseInt(normalized, 10);
+  return isNaN(num) ? 8728 : num;
+};
+
 export default function UserManagerSettings() {
   const utils = trpc.useUtils();
   const { data: config, isLoading } = trpc.userManager.getConfig.useQuery();
@@ -96,7 +104,7 @@ export default function UserManagerSettings() {
     }
     saveMutation.mutate({
       host: host.trim(),
-      apiPort: Number(apiPort) || 8728,
+      apiPort: toWesternDigits(apiPort),
       username: username.trim(),
       password,
       customerPassword,
@@ -111,7 +119,7 @@ export default function UserManagerSettings() {
     setTestResult(null);
     testMutation.mutate({
       host: host.trim(),
-      apiPort: Number(apiPort) || 8728,
+      apiPort: toWesternDigits(apiPort),
       username: username.trim(),
       password,
       useTls,
@@ -263,13 +271,21 @@ export default function UserManagerSettings() {
                 منفذ الـ API (Port) <span className="text-rose-600">*</span>
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={apiPort}
-                onChange={(e) => setApiPort(Number(e.target.value))}
-                placeholder="8728"
+                onChange={(e) => setApiPort(toWesternDigits(e.target.value))}
+                placeholder="12862 أو 8728"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
-              <p className="mt-1 text-[11px] text-slate-500">الافتراضي 8728 (أو 8729 عند تشغيل تشفير SSL/TLS).</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                منفذ خدمة الـ API (الافتراضي 8728 محلياً، أو منفذ الـ API في النفق مثل <strong>12862</strong>).
+              </p>
+              {String(apiPort) === "12861" && (
+                <p className="mt-1.5 text-xs font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                  ⚠️ تنبيه: 12861 هو منفذ المتصفح (Web)! منفذ الـ API لراوترك في النفق هو <strong>12862</strong>.
+                </p>
+              )}
             </div>
 
             {/* Mode */}
