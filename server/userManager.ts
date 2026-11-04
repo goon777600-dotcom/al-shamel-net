@@ -274,6 +274,78 @@ export async function testUserManagerConnection(customConfig?: {
   }
 }
 
+// =========================================================================
+// Persistent RouterOS Connection Pool (Keep-Alive for Instant Card Generation)
+// =========================================================================
+let sharedClient: RouterosClient | null = null;
+let sharedConfigKey: string = "";
+let keepAliveTimer: NodeJS.Timeout | null = null;
+let isConnectingShared = false;
+
+export function resetSharedRouterosClient(): void {
+  if (sharedClient) {
+    try {
+      sharedClient.destroy();
+    } catch {}
+    sharedClient = null;
+  }
+  sharedConfigKey = "";
+}
+
+export async function getSharedRouterosClient(forceNew = false): Promise<RouterosClient> {
+  const router = await getActiveRouterConfig();
+  const configKey = `${router.host}:${router.apiPort}:${router.username}:${router.password}:${router.useTls}`;
+
+  if (!forceNew && sharedClient && sharedClient.isConnected() && sharedConfigKey === configKey) {
+    return sharedClient;
+  }
+
+  // If already connecting, wait for existing connection attempt
+  if (isConnectingShared) {
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      if (sharedClient && sharedClient.isConnected() && sharedConfigKey === configKey) {
+        return sharedClient;
+      }
+    }
+  }
+
+  isConnectingShared = true;
+  try {
+    resetSharedRouterosClient();
+
+    const client = new RouterosClient({
+      host: router.host,
+      port: router.apiPort,
+      user: router.username,
+      password: router.password,
+      useTls: router.useTls,
+      timeoutMs: 4500,
+    });
+
+    await client.connect();
+    sharedClient = client;
+    sharedConfigKey = configKey;
+
+    // Start background keep-alive ping (every 30 seconds) to keep the tunnel socket hot
+    if (!keepAliveTimer) {
+      keepAliveTimer = setInterval(async () => {
+        if (!sharedClient || !sharedClient.isConnected()) return;
+        try {
+          await sharedClient.runCommand("/system/identity/print");
+        } catch (e: any) {
+          console.warn("[UserManager] Keep-alive ping failed, resetting shared client:", e.message);
+          resetSharedRouterosClient();
+        }
+      }, 30_000);
+    }
+
+    return sharedClient;
+  } finally {
+    isConnectingShared = false;
+  }
+}
+
 /**
  * Fetch available profiles directly from the router
  */
@@ -282,26 +354,21 @@ export async function fetchAvailableProfiles(): Promise<{
   profiles: Array<{ name: string; validity?: string; price?: string }>;
 }> {
   const router = await getActiveRouterConfig();
-  const client = new RouterosClient({
-    host: router.host,
-    port: router.apiPort,
-    user: router.username,
-    password: router.password,
-    useTls: router.useTls,
-    timeoutMs: 4000,
-  });
 
   try {
-    await client.connect();
-    const result = await client.getAllAvailableProfiles();
-    client.destroy();
-    return result;
-  } catch (err: any) {
-    client.destroy();
-    return {
-      mode: router.mode,
-      profiles: [],
-    };
+    const client = await getSharedRouterosClient();
+    return await client.getAllAvailableProfiles();
+  } catch {
+    try {
+      resetSharedRouterosClient();
+      const fresh = await getSharedRouterosClient(true);
+      return await fresh.getAllAvailableProfiles();
+    } catch {
+      return {
+        mode: router.mode,
+        profiles: [],
+      };
+    }
   }
 }
 
@@ -351,21 +418,10 @@ export async function createCardDirectlyInUserManager(options: {
   let syncedToRouter = false;
   let routerMessage: string | undefined;
 
-  const client = new RouterosClient({
-    host: router.host,
-    port: router.apiPort,
-    user: router.username,
-    password: router.password,
-    useTls: router.useTls,
-    timeoutMs: 4500,
-  });
+  const mode = router.mode === "usermanager_v7" ? "v7" : "v6";
+  const profileName = options.routerProfileName || undefined;
 
-  try {
-    await client.connect();
-
-    const mode = router.mode === "usermanager_v7" ? "v7" : "v6";
-    const profileName = options.routerProfileName || undefined;
-
+  const executeAddCard = async (client: RouterosClient) => {
     if (router.mode === "hotspot") {
       await client.addHotspotCard({
         username: pinCode,
@@ -389,14 +445,27 @@ export async function createCardDirectlyInUserManager(options: {
         router.customer || "admin"
       );
     }
+  };
 
+  try {
+    // 1. Instant execution using persistent warm connection (~100-200ms)
+    const client = await getSharedRouterosClient();
+    await executeAddCard(client);
     syncedToRouter = true;
     routerMessage = `تم إنشاء الكرت بنجاح داخل اليوزر مانجر بروفايل (${profileName || "افتراضي"})`;
-    client.destroy();
   } catch (err: any) {
-    client.destroy();
-    console.warn("[UserManager] Card created, direct router sync failed:", err.message);
-    routerMessage = `تم توليد الكرت بنجاح (${err.message})`;
+    console.warn("[UserManager] Warm client failed, retrying with fresh connection:", err.message);
+    try {
+      // 2. Fallback: reconnect and retry once if socket dropped
+      resetSharedRouterosClient();
+      const freshClient = await getSharedRouterosClient(true);
+      await executeAddCard(freshClient);
+      syncedToRouter = true;
+      routerMessage = `تم إنشاء الكرت بنجاح داخل اليوزر مانجر بروفايل (${profileName || "افتراضي"})`;
+    } catch (retryErr: any) {
+      console.warn("[UserManager] Card created, direct router sync failed:", retryErr.message);
+      routerMessage = `تم توليد الكرت بنجاح (${retryErr.message})`;
+    }
   }
 
   return {
@@ -423,5 +492,6 @@ export async function saveRouterConfig(input: {
   customer?: string;
   loginUrl?: string;
 }) {
+  resetSharedRouterosClient();
   return await saveRouterSettings(input);
 }

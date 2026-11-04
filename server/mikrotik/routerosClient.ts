@@ -585,6 +585,13 @@ export class RouterosClient {
   }
 
   /**
+   * Check if client is currently connected and ready
+   */
+  isConnected(): boolean {
+    return Boolean(this.connected && this.socket && !this.socket.destroyed);
+  }
+
+  /**
    * Gracefully close connection
    */
   destroy(): void {
