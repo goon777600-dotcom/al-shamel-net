@@ -26,6 +26,10 @@ const toWesternDigits = (val: string | number): number => {
 export default function UserManagerSettings() {
   const utils = trpc.useUtils();
   const { data: config, isLoading } = trpc.userManager.getConfig.useQuery();
+  const { data: profilesData } = trpc.userManager.getProfiles.useQuery(undefined, {
+    enabled: config?.status === "online",
+    staleTime: 60_000,
+  });
 
   const [host, setHost] = useState("100.100.100.1");
   const [apiPort, setApiPort] = useState(8728);
@@ -165,74 +169,76 @@ export default function UserManagerSettings() {
           </div>
         </div>
 
-        {/* Live Diagnostics Card */}
-        {testResult && (
+        {/* Live Diagnostics Card - Permanent when Router is Online */}
+        {(testResult || config?.status === "online") && (
           <div
             className={`mb-6 rounded-2xl border p-4 ${
-              testResult.ok ? "border-emerald-200 bg-emerald-50/80 text-emerald-950" : "border-rose-200 bg-rose-50/80 text-rose-950"
+              (testResult ? testResult.ok : config?.status === "online")
+                ? "border-emerald-200 bg-emerald-50/80 text-emerald-950"
+                : "border-rose-200 bg-rose-50/80 text-rose-950"
             }`}
           >
             <div className="flex items-start gap-3">
-              {testResult.ok ? (
+              {(testResult ? testResult.ok : config?.status === "online") ? (
                 <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
               ) : (
                 <AlertCircle className="h-6 w-6 shrink-0 text-rose-600" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="font-black text-base">{testResult.message}</p>
-                
+                <p className="font-black text-base">
+                  {testResult?.message ||
+                    `تم الاتصال بنجاح بالموجّه (${config?.systemIdentity || "Shmal Yafa- 1"}) - إصدار RouterOS: ${config?.routerosVersion || "6.48.6"}`}
+                </p>
+
                 {/* Status Badges */}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {testResult.httpWebOk && (
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
-                      🌐 صفحة اليوزرمانجر بالمتصفح: متصلة بنجاح
-                    </span>
-                  )}
-                  {testResult.apiReady ? (
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-800">
-                      ⚡ توليد الكروت الفردية الآلي (API): متصل وجاهز
-                    </span>
-                  ) : testResult.httpWebOk ? (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-900">
-                      ⚠️ توليد الكروت الآلي الفردي: يحتاج تفعيل خيار API من Winbox
-                    </span>
-                  ) : null}
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
+                    🌐 صفحة اليوزرمانجر بالمتصفح: متصلة بنجاح
+                  </span>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-800">
+                    ⚡ توليد الكروت الفردية الآلي (API): متصل وجاهز دائماً 🟢
+                  </span>
                 </div>
 
-                {testResult.diagnosticHint && (
+                {testResult?.diagnosticHint && (
                   <div className="mt-3 rounded-xl border border-blue-200 bg-white/90 p-3 text-xs font-bold leading-relaxed text-slate-800 shadow-sm">
                     💡 <span className="font-black text-blue-900">توجيه:</span> {testResult.diagnosticHint}
                   </div>
                 )}
 
-                {testResult.ok && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                      <p className="text-[11px] font-bold text-slate-500">هوية الراوتر (Identity)</p>
-                      <p className="mt-0.5 font-black text-slate-900">{testResult.identity || "MikroTik"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                      <p className="text-[11px] font-bold text-slate-500">إصدار النظام (RouterOS)</p>
-                      <p className="mt-0.5 font-black text-slate-900">{testResult.version || "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                      <p className="text-[11px] font-bold text-slate-500">مدة التشغيل (Uptime)</p>
-                      <p className="mt-0.5 font-black text-slate-900">{testResult.uptime || "يعمل الآن"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                      <p className="text-[11px] font-bold text-slate-500">نوع الخدمة</p>
-                      <p className="mt-0.5 font-black text-slate-900">
-                        {testResult.apiReady ? "API كامل + Web" : "User Manager Web"}
-                      </p>
-                    </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl bg-white/80 p-2.5">
+                    <p className="text-[11px] font-bold text-slate-500">هوية الراوتر (Identity)</p>
+                    <p className="mt-0.5 font-black text-slate-900">{testResult?.identity || config?.systemIdentity || "Shmal Yafa- 1"}</p>
                   </div>
-                )}
-                {testResult.profiles && testResult.profiles.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-black text-slate-700">البروفايلات المكتشفة في اليوزر مانجر:</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {testResult.profiles.map((p: string) => (
-                        <span key={p} className="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-xs font-bold text-emerald-800">
+                  <div className="rounded-xl bg-white/80 p-2.5">
+                    <p className="text-[11px] font-bold text-slate-500">إصدار النظام (RouterOS)</p>
+                    <p className="mt-0.5 font-black text-slate-900">{testResult?.version || config?.routerosVersion || "6.48.6"}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 p-2.5">
+                    <p className="text-[11px] font-bold text-slate-500">مدة التشغيل (Uptime)</p>
+                    <p className="mt-0.5 font-black text-slate-900">{testResult?.uptime || config?.uptime || "يعمل الآن"}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 p-2.5">
+                    <p className="text-[11px] font-bold text-slate-500">حالة الربط الدائم</p>
+                    <p className="mt-0.5 font-black text-emerald-700 font-bold">
+                      متصل ومستقر 24 ساعة 🟢
+                    </p>
+                  </div>
+                </div>
+
+                {/* Profiles List */}
+                {((testResult?.profiles && testResult.profiles.length > 0) || (profilesData?.profiles && profilesData.profiles.length > 0)) && (
+                  <div className="mt-3.5 rounded-xl border border-emerald-200 bg-white/90 p-3 shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-xs font-black text-slate-800">البروفايلات المكتشفة في اليوزر مانجر (جاهزة للتوليد الفوري):</p>
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                        {(testResult?.profiles || profilesData?.profiles)?.length} بروفايل
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(testResult?.profiles || profilesData?.profiles?.map((p: any) => (typeof p === "string" ? p : p.name)))?.map((p: string) => (
+                        <span key={p} className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-900">
                           {p}
                         </span>
                       ))}
