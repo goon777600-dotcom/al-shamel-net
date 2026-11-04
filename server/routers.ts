@@ -73,6 +73,8 @@ const packageAdminInput = z.object({
   isActive: z.boolean(),
 });
 
+const inFlightPurchases = new Set<number>();
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -411,8 +413,6 @@ export const appRouter = router({
         return { success: true, newBalance, newTotalTopUp };
       }),
   }),
-
-const inFlightPurchases = new Set<number>();
 
   purchases: router({
     buyPackage: protectedProcedure

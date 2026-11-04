@@ -382,12 +382,22 @@ export class RouterosClient {
    * Execute arbitrary RouterOS command and return attributes
    */
   async runCommand(command: string, params: Record<string, string> = {}): Promise<Record<string, string>[]> {
+    const res = await this.executeCommand(command, params);
+    return res.records;
+  }
+
+  /**
+   * Execute arbitrary RouterOS command and return attributes plus the ret attribute
+   */
+  async executeCommand(command: string, params: Record<string, string> = {}): Promise<{ records: Record<string, string>[]; ret?: string }> {
     const words = [command];
     for (const [k, v] of Object.entries(params)) {
       words.push(`=${k}=${v}`);
     }
     const resp = await this.sendSentence(words);
-    return this.parseRecords(resp);
+    const done = resp.find((s) => s[0] === "!done");
+    const ret = this.extractAttribute(done, "ret");
+    return { records: this.parseRecords(resp), ret };
   }
 
   /**
@@ -519,14 +529,15 @@ export class RouterosClient {
       };
       if (card.comment) params["comment"] = card.comment;
 
-      await this.runCommand("/tool/user-manager/user/add", params);
+      const addResult = await this.executeCommand("/tool/user-manager/user/add", params);
+      const userRef = addResult.ret || card.username;
 
-      // If a profile is specified, create and activate it for this user
+      // If a profile is specified, create and activate it for this user using its router ID (*xxxx)
       if (card.profileName) {
         try {
           await this.runCommand("/tool/user-manager/user/create-and-activate-profile", {
             customer,
-            numbers: card.username,
+            numbers: userRef,
             profile: card.profileName,
           });
         } catch (e: any) {
