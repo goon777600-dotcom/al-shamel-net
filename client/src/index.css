@@ -190,6 +190,8 @@
     border: 1px solid rgb(227 184 96 / 38%);
     border-radius: 999px;
     box-shadow: 0 0 0 1.6rem rgb(227 184 96 / 7%), 0 0 0 3.2rem rgb(227 184 96 / 5%);
+    pointer-events: none;
+    z-index: 0;
   }
 
   .shamel-auth-card {

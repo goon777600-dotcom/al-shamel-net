@@ -179,19 +179,19 @@ export default function Store() {
               <button
                 type="button"
                 onClick={() => setTopUpOpen(true)}
-                className="group flex items-center gap-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-100 via-amber-50 to-white px-3 py-1.5 shadow-sm transition hover:border-amber-400 hover:shadow active:scale-95 cursor-pointer"
+                className="group flex items-center gap-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-100 via-amber-50 to-white px-3 py-1.5 shadow-sm transition hover:border-amber-400 hover:shadow active:scale-95 cursor-pointer select-none"
                 title="اضغط لشحن المحفظة فوراً"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-400 text-xs font-black text-slate-950 shadow-xs">
+                <span className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-xl bg-amber-400 text-xs font-black text-slate-950 shadow-xs">
                   💰
                 </span>
-                <div className="text-right">
+                <div className="pointer-events-none text-right">
                   <p className="text-[10px] font-bold text-amber-900 leading-none">المحفظة</p>
                   <p className="text-xs font-black text-slate-950 leading-tight">
                     {wallet ? formatPrice(wallet.balance) : "0"} ر.ي
                   </p>
                 </div>
-                <span className="rounded-lg bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950 group-hover:bg-amber-300">
+                <span className="pointer-events-none rounded-lg bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950 group-hover:bg-amber-300">
                   + شحن
                 </span>
               </button>
@@ -303,8 +303,8 @@ export default function Store() {
             )}
 
             {user && (
-              <Card className="shamel-wallet mt-6 border-0 text-white shadow-xl">
-                <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+              <Card className="shamel-wallet relative mt-6 overflow-hidden border-0 text-white shadow-xl">
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
                   <div>
                     <p className="text-xs font-bold text-blue-100 sm:text-sm">رصيد محفظتك الحالي</p>
                     <p className="mt-1 text-2xl font-black tabular-nums sm:text-3xl">
@@ -314,10 +314,14 @@ export default function Store() {
                   <Button
                     type="button"
                     size="lg"
-                    onClick={() => setTopUpOpen(true)}
-                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-lg cursor-pointer text-sm sm:text-base px-6 py-2.5 transition active:scale-95 select-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTopUpOpen(true);
+                    }}
+                    className="relative z-20 inline-flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 cursor-pointer text-sm sm:text-base px-6 py-2.5 transition select-none"
                   >
-                    💰 شحن المحفظة
+                    <span className="pointer-events-none text-base">💰</span>
+                    <span className="pointer-events-none">شحن المحفظة</span>
                   </Button>
                 </div>
               </Card>
