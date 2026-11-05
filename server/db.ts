@@ -496,15 +496,58 @@ export async function getAdminOverview(period: AdminOverviewPeriod = "today") {
       totalOrders: 0,
       totalSales: "0",
       recentOrders: [],
+      totalDeposits: "0",
+      depositsCount: 0,
+      circulatingBalance: "0",
+      depositsByMethod: [] as Array<{ method: string; total: string; count: number }>,
+      recentDeposits: [] as Array<{
+        id: number;
+        amount: string;
+        method: string;
+        referenceNumber: string | null;
+        senderName: string | null;
+        createdAt: Date;
+        userName: string | null;
+        userPhone: string | null;
+      }>,
     };
   }
 
-  const purchaseStart = getOverviewStart(period);
-  const purchaseFilter = purchaseStart ? gte(purchases.createdAt, purchaseStart) : undefined;
+  const periodStart = getOverviewStart(period);
+  const purchaseFilter = periodStart ? gte(purchases.createdAt, periodStart) : undefined;
+  
+  // Deposit filter: only approved requests in the period
+  const depositFilter = periodStart
+    ? and(eq(topUpRequests.status, "approved"), gte(topUpRequests.createdAt, periodStart))
+    : eq(topUpRequests.status, "approved");
+
   const [packageCount] = await db.select({ value: count() }).from(packages);
   const [userCount] = await db.select({ value: count() }).from(users);
   const [orderCount] = await db.select({ value: count() }).from(purchases).where(purchaseFilter);
   const [salesTotal] = await db.select({ value: sum(purchases.amount) }).from(purchases).where(purchaseFilter);
+
+  // Treasury metrics
+  const [depositTotal] = await db.select({ value: sum(topUpRequests.amount) }).from(topUpRequests).where(depositFilter);
+  const [depositCount] = await db.select({ value: count() }).from(topUpRequests).where(depositFilter);
+  const [circulatingTotal] = await db.select({ value: sum(wallets.balance) }).from(wallets);
+
+  // Breakdown by payment method
+  const depositsByMethodRaw = await db
+    .select({
+      method: topUpRequests.method,
+      total: sum(topUpRequests.amount),
+      count: count(),
+    })
+    .from(topUpRequests)
+    .where(depositFilter)
+    .groupBy(topUpRequests.method);
+
+  const depositsByMethod = depositsByMethodRaw.map((row) => ({
+    method: row.method,
+    total: row.total ?? "0",
+    count: Number(row.count ?? 0),
+  }));
+
   const recentOrders = await db
     .select({
       id: purchases.id,
@@ -519,12 +562,34 @@ export async function getAdminOverview(period: AdminOverviewPeriod = "today") {
     .orderBy(desc(purchases.createdAt))
     .limit(5);
 
+  const recentDeposits = await db
+    .select({
+      id: topUpRequests.id,
+      amount: topUpRequests.amount,
+      method: topUpRequests.method,
+      referenceNumber: topUpRequests.referenceNumber,
+      senderName: topUpRequests.senderName,
+      createdAt: topUpRequests.createdAt,
+      userName: users.name,
+      userPhone: users.email,
+    })
+    .from(topUpRequests)
+    .leftJoin(users, eq(topUpRequests.userId, users.id))
+    .where(depositFilter)
+    .orderBy(desc(topUpRequests.createdAt))
+    .limit(8);
+
   return {
     totalPackages: Number(packageCount?.value ?? 0),
     totalUsers: Number(userCount?.value ?? 0),
     totalOrders: Number(orderCount?.value ?? 0),
     totalSales: salesTotal?.value ?? "0",
     recentOrders,
+    totalDeposits: depositTotal?.value ?? "0",
+    depositsCount: Number(depositCount?.value ?? 0),
+    circulatingBalance: circulatingTotal?.value ?? "0",
+    depositsByMethod,
+    recentDeposits,
   };
 }
 

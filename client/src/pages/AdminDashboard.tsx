@@ -42,6 +42,7 @@ import {
   Bell,
   CreditCard,
   Landmark,
+  Wallet,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -49,6 +50,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import AdminNotifications from "@/components/AdminNotifications";
 import AdminTopUpRequests from "@/components/AdminTopUpRequests";
+import AdminTreasuryManager from "@/components/AdminTreasuryManager";
 import AdminCustomersManager from "@/components/AdminCustomersManager";
 import AdminPaymentMethodsManager from "@/components/AdminPaymentMethodsManager";
 import UserManagerSettings from "@/components/UserManagerSettings";
@@ -204,36 +206,36 @@ export default function AdminDashboard() {
 
   const metrics = [
     {
-      label: "إجمالي المبيعات",
+      label: "صندوق النقدية والإيداعات",
+      value: `${formatNumber(overview?.totalDeposits ?? 0)} ر.ي`,
+      note: `${overview?.depositsCount ?? 0} عملية شحن (${periodLabel[period]})`,
+      icon: Landmark,
+      tint: "from-emerald-950 via-emerald-800 to-teal-700",
+      iconClass: "bg-emerald-100 text-emerald-700",
+    },
+    {
+      label: "إجمالي مبيعات الكروت",
       value: `${formatNumber(overview?.totalSales ?? 0)} ر.ي`,
-      note: `ضمن ${periodLabel[period]}`,
+      note: `${formatNumber(overview?.totalOrders ?? 0)} كرت مستهلك (${periodLabel[period]})`,
       icon: CircleDollarSign,
       tint: "from-blue-950 via-blue-800 to-blue-600",
       iconClass: "bg-blue-100 text-blue-700",
     },
     {
-      label: "الطلبات المنفذة",
-      value: formatNumber(overview?.totalOrders ?? 0),
-      note: `طلبات ${periodLabel[period]}`,
-      icon: ClipboardList,
-      tint: "from-emerald-950 via-emerald-800 to-emerald-600",
-      iconClass: "bg-emerald-100 text-emerald-700",
+      label: "رصيد المحافظ المتبقي",
+      value: `${formatNumber(overview?.circulatingBalance ?? 0)} ر.ي`,
+      note: "رصيد مودع لم يُشترَ به كروت بعد",
+      icon: Wallet,
+      tint: "from-amber-950 via-amber-800 to-amber-600",
+      iconClass: "bg-amber-100 text-amber-700",
     },
     {
-      label: "الحسابات المسجلة",
+      label: "العملاء المسجلين",
       value: formatNumber(overview?.totalUsers ?? 0),
-      note: "حسابات العملاء",
+      note: "حسابات العملاء بالشبكة",
       icon: Users,
       tint: "from-violet-950 via-violet-800 to-violet-600",
       iconClass: "bg-violet-100 text-violet-700",
-    },
-    {
-      label: "الباقات المتاحة",
-      value: formatNumber(overview?.totalPackages ?? 0),
-      note: "باقات مفعّلة حالياً",
-      icon: PackageCheck,
-      tint: "from-amber-950 via-amber-800 to-amber-600",
-      iconClass: "bg-amber-100 text-amber-700",
     },
   ];
 
@@ -465,6 +467,20 @@ export default function AdminDashboard() {
               </button>
               <button
                 type="button"
+                onClick={() => document.getElementById("admin-treasury")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-right transition hover:border-emerald-400 hover:bg-emerald-50"
+              >
+                <span className="rounded-xl bg-emerald-600 p-2 text-white">
+                  <Landmark className="h-5 w-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-black text-emerald-950">صندوق النقدية والإيداعات</span>
+                  <span className="mt-1 block text-xs text-emerald-700">حركة المبالغ الواصلة ومطابقة بنك الشمول والكاش</span>
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => document.getElementById("admin-notifications")?.scrollIntoView({ behavior: "smooth" })}
                 className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white/80 p-3 text-right transition hover:border-blue-400 hover:bg-white"
               >
@@ -520,6 +536,20 @@ export default function AdminDashboard() {
               </button>
             </div>
           </Card>
+        </section>
+
+        {/* Treasury & Financial Cashbox Section */}
+        <section className="mb-7" id="admin-treasury">
+          <AdminTreasuryManager
+            period={period}
+            periodLabel={periodLabel[period]}
+            totalDeposits={overview?.totalDeposits ?? 0}
+            depositsCount={overview?.depositsCount ?? 0}
+            totalSales={overview?.totalSales ?? 0}
+            circulatingBalance={overview?.circulatingBalance ?? 0}
+            depositsByMethod={overview?.depositsByMethod ?? []}
+            recentDeposits={overview?.recentDeposits ?? []}
+          />
         </section>
 
         {/* Live Categorized Notifications (Split Side-by-Side: Top-ups, New Accounts, Purchases) */}
