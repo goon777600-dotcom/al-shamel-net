@@ -53,7 +53,7 @@ import AdminCustomersManager from "@/components/AdminCustomersManager";
 import AdminPaymentMethodsManager from "@/components/AdminPaymentMethodsManager";
 import UserManagerSettings from "@/components/UserManagerSettings";
 
-const logoUrl = "/manus-storage/al-shamel-logo_9fc75833.jpeg";
+const logoUrl = "/images/al-shamel-logo.png";
 const periodLabel = {
   today: "اليوم",
   week: "آخر 7 أيام",

@@ -16,7 +16,7 @@ import { COOKIE_NAME } from "@shared/const";
 
 type AuthMode = "login" | "register";
 
-const logoUrl = "/manus-storage/al-shamel-logo_9fc75833.jpeg";
+const logoUrl = "/images/al-shamel-logo.png";
 const walletPosterUrl = "/images/al-shamel-wallet.jpg";
 
 export default function LoginCard() {
@@ -117,55 +117,64 @@ export default function LoginCard() {
 
   return (
     <Card className="shamel-auth-card mt-6 overflow-hidden bg-white shadow-2xl border border-blue-100 rounded-3xl">
-      <div className="grid lg:grid-cols-[1fr_1fr] items-stretch">
+      <div className="grid lg:grid-cols-[1.05fr_0.95fr] items-stretch">
         <aside className="shamel-auth-aside relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#061a37] via-[#09356d] to-[#145fa8] p-5 sm:p-7 text-white">
           <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
           <div className="pointer-events-none absolute -right-20 -bottom-20 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl" />
 
           <div className="relative z-10 flex flex-col items-center">
-            {/* Header badge */}
-            <div className="mb-3.5 flex w-full items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/35 bg-amber-400/15 px-3 py-1 text-xs font-black text-amber-200">
-                <ShieldCheck className="h-3.5 w-3.5 text-amber-300" /> محفظة الشامل الإلكترونية
-              </span>
-              <span className="text-[11px] font-bold text-blue-200/90">
-                ⚡ اشتري باقتك من أي مكان
-              </span>
+            {/* 1. هوية الشعار الرسمي في مكان الشعار */}
+            <div className="mb-4 flex w-full justify-center rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-xl shadow-slate-950/25">
+              <img
+                src={logoUrl}
+                alt="شعار الشامل لخدمات الإنترنت"
+                className="h-14 sm:h-16 w-auto object-contain block select-none"
+              />
             </div>
 
-            {/* Poster Showcase */}
+            {/* 2. صورة المحفظة بشكل مرتب وفني */}
             <div
               onClick={() => {
                 const el = document.getElementById("packages-list");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
               }}
               title="اضغط لتصفح باقات المتجر مباشرة"
-              className="group relative w-full overflow-hidden rounded-2xl border-2 border-amber-300/40 bg-white/95 p-1 shadow-2xl shadow-blue-950/60 transition-all duration-300 hover:border-amber-300 hover:shadow-amber-400/30 cursor-pointer"
+              className="group relative w-full overflow-hidden rounded-2xl border-2 border-amber-300/60 bg-white p-1.5 shadow-2xl shadow-blue-950/50 transition-all duration-300 hover:border-amber-300 hover:shadow-amber-400/30 cursor-pointer"
             >
               <img
                 src={walletPosterUrl}
                 alt="محفظة الشامل - اشتري باقتك من أي مكان"
-                className="w-full h-auto rounded-xl object-contain block select-none transition duration-300 group-hover:scale-[1.01]"
+                className="w-full h-auto max-h-[340px] rounded-xl object-contain mx-auto block select-none transition duration-300 group-hover:scale-[1.01]"
               />
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-blue-950/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex items-end justify-center pb-3">
-                <span className="rounded-full bg-amber-400 px-4 py-1 text-xs font-black text-slate-950 shadow-lg">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-blue-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex items-end justify-center pb-3">
+                <span className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-black text-slate-950 shadow-lg">
                   تصفح الباقات الآن ↓
                 </span>
               </div>
             </div>
 
-            {/* Subtitle / Call to action */}
-            <div className="mt-4 text-center">
-              <p className="text-sm font-black text-white leading-relaxed">
-                اشحن محفظتك بسهولة وابق متصلاً دائماً ⚡
-              </p>
-              <p className="mt-1 text-xs text-blue-100/90 leading-5">
-                سجل الدخول أو أنشئ حسابك لإتمام الشراء وشحن المحفظة وحفظ كروتك فوراً.
+            {/* شارات الأمان والمحفظة */}
+            <div className="mt-4 flex w-full items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" /> نظام آمن وموثوق
+              </span>
+              <span className="text-[11px] font-bold text-amber-200">
+                ✨ محفظة الشامل الإلكترونية
+              </span>
+            </div>
+
+            {/* العنوان والوصف */}
+            <div className="mt-3 text-center">
+              <h2 className="text-xl sm:text-2xl font-black leading-tight text-white">
+                بوابة الشامل نت لخدمات الإنترنت
+              </h2>
+              <p className="mt-1 text-xs leading-6 text-blue-100/90">
+                سجل دخولك أو أنشئ حسابك للاستفادة من باقات وكروت الإنترنت، شحن المحفظة، وحفظ كروتك فوراً بكل سهولة وسرعة.
               </p>
             </div>
           </div>
 
-          {/* Quick Features Row */}
+          {/* شريط الميزات */}
           <div className="relative z-10 mt-5 flex flex-wrap items-center justify-center gap-2 border-t border-white/10 pt-3 text-[11px] font-bold text-blue-100">
             <span className="flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1">
               📶 باقات متنوعة

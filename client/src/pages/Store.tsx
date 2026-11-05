@@ -159,7 +159,7 @@ export default function Store() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/manus-storage/al-shamel-logo_9fc75833.jpeg" alt="شعار الشامل لخدمات الإنترنت" className="h-16 w-24 rounded-xl border border-amber-200/80 bg-white object-contain p-1 shadow-md shadow-blue-950/10 sm:h-20 sm:w-28" />
+            <img src="/images/al-shamel-logo.png" alt="شعار الشامل لخدمات الإنترنت" className="h-16 w-auto max-w-[140px] rounded-xl border border-amber-200/80 bg-white object-contain p-1.5 shadow-md shadow-blue-950/10 sm:h-20 sm:max-w-[180px]" />
             <div>
               <p className="mb-1 text-xs font-black tracking-[0.18em] text-blue-600">AL SHAMEL SERVICES</p>
               <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">الشامل لخدمات الإنترنت</h1>

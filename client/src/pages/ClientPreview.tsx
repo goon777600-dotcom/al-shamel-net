@@ -7,7 +7,7 @@ type Screen = "home" | "wallet" | "cards" | "history" | "settings";
 type ClientPackage = { id: number; name: string; description: string | null; price: string; size: string };
 type ClientPurchase = { name: string; price: number; pin: string };
 
-const logoUrl = "/manus-storage/al-shamel-logo_9fc75833.jpeg";
+const logoUrl = "/images/al-shamel-logo.png";
 const price = (value: string | number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Number(value));
 const visualPurchasePackage: ClientPackage = { id: -1, name: "كرت 3 جيجا", description: "باقة متوسطة للألعاب ومقاطع الفيديو", price: "1000", size: "medium" };
 
