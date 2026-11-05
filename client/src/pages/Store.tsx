@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Crown, Gem, Loader2, Wifi, Zap, ShieldCheck, UserCheck, BarChart3, LogOut, LogIn, ShoppingBag, Settings2, Copy, Check } from "lucide-react";
+import { Crown, Gem, Loader2, Wifi, Zap, ShieldCheck, UserCheck, BarChart3, LogOut, LogIn, ShoppingBag, Settings2, Copy, Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import TopUpModal from "@/components/TopUpModal";
 import PurchaseSuccessModal from "@/components/PurchaseSuccessModal";
@@ -294,6 +294,89 @@ export default function Store() {
           </div>
         ) : (
           <>
+            {/* مقدمة المحفظة: البوستر الإعلاني الرئيسي */}
+            <div className="relative mt-2 mb-6 overflow-hidden rounded-3xl border border-amber-300/50 bg-gradient-to-br from-[#061a37] via-[#0a3568] to-[#125ba0] p-4 sm:p-6 text-white shadow-xl">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div 
+                  onClick={() => document.getElementById("packages-list")?.scrollIntoView({ behavior: "smooth" })}
+                  className="w-full md:w-5/12 max-w-sm shrink-0 cursor-pointer overflow-hidden rounded-2xl border-2 border-amber-300/60 bg-white p-1 shadow-2xl transition duration-300 hover:scale-[1.01]"
+                  title="اضغط لبدء الشراء وتصفح الباقات"
+                >
+                  <img
+                    src="/images/al-shamel-wallet.jpg"
+                    alt="محفظة الشامل - اشتري باقتك من أي مكان"
+                    className="w-full h-auto rounded-xl object-contain block select-none"
+                  />
+                </div>
+                <div className="flex-1 text-center md:text-right space-y-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/15 px-3 py-1 text-xs font-black text-amber-200">
+                    ✨ البوابة الرسمية لمحفظة الشامل نت
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                    محفظة الشامل - اشتري باقتك من أي مكان
+                  </h2>
+                  <p className="text-sm font-bold text-amber-300">
+                    اشحن محفظتك بسهولة وابق متصلاً دائماً ⚡
+                  </p>
+                  <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed max-w-xl">
+                    النظام الأسرع لتوليد كروتك فوراً عبر المايكروتك دون انتظار، مع متابعة رصيدك واسترجاع كروتك في أي وقت ومن أي مكان.
+                  </p>
+                  
+                  {/* أزرار وتفاصيل المحفظة */}
+                  {user ? (
+                    <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+                      <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm text-right">
+                        <span className="text-[11px] font-bold text-blue-200">رصيد محفظتك الحالي:</span>
+                        <p className="text-xl font-black text-amber-300 tabular-nums">
+                          {wallet ? formatPrice(wallet.balance) : "0"} <span className="text-sm font-bold text-white">ر.ي</span>
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setTopUpOpen(true)}
+                        className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 h-11 text-sm shadow-lg cursor-pointer active:scale-95"
+                      >
+                        💰 شحن المحفظة
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => document.getElementById("packages-list")?.scrollIntoView({ behavior: "smooth" })}
+                        variant="outline"
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 font-black h-11 text-sm cursor-pointer"
+                      >
+                        ابدأ الشراء الآن ➔
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+                      <Button
+                        type="button"
+                        onClick={() => document.querySelector(".shamel-auth-card")?.scrollIntoView({ behavior: "smooth" })}
+                        className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-6 h-11 text-sm shadow-lg cursor-pointer active:scale-95"
+                      >
+                        <LogIn className="ml-1.5 h-4 w-4" /> تسجيل الدخول الآن
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => document.getElementById("packages-list")?.scrollIntoView({ behavior: "smooth" })}
+                        variant="outline"
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 font-black h-11 text-sm cursor-pointer"
+                      >
+                        استعراض الباقات ➔
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-2 text-[11px] font-bold text-blue-100">
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">📶 باقات متنوعة</span>
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">⚡ شحن سريع</span>
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">📍 من أي مكان</span>
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">🛡️ دائماً متصل</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {!user && (
               <div className="mb-6">
                 <LoginCard />
