@@ -115,180 +115,146 @@ export default function LoginCard() {
   };
 
   return (
-    <Card className="shamel-auth-card mt-6 overflow-hidden bg-white shadow-2xl border border-blue-100 rounded-3xl">
-      <div className="grid lg:grid-cols-[0.9fr_1.1fr] items-stretch">
-        <aside className="shamel-auth-aside relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#061a37] via-[#09356d] to-[#145fa8] p-7 sm:p-9 text-white">
-          <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-20 -bottom-20 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col items-center text-center">
-            {/* الشعار الرسمي لهوية الشامل نت */}
-            <div className="mb-6 flex w-full justify-center rounded-2xl border border-amber-200/80 bg-white/95 p-4 shadow-xl shadow-slate-950/25">
-              <img
-                src={logoUrl}
-                alt="شعار الشامل لخدمات الإنترنت"
-                className="h-16 sm:h-20 w-auto object-contain block select-none"
-              />
-            </div>
-
-            <div className="mb-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-400/15 px-3.5 py-1.5 text-xs font-black text-emerald-200">
-                <ShieldCheck className="h-4 w-4 text-emerald-300" /> نظام آمن وموثوق
-              </span>
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl font-black leading-tight text-white">
-              بوابة الشامل نت لخدمات الإنترنت
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-blue-100/90 max-w-sm">
-              سجل دخولك أو أنشئ حسابك للاستفادة من باقات وكروت الإنترنت، شحن رصيد محفظتك، وإدارة كروتك بكل سهولة وسرعة.
-            </p>
-          </div>
-
-          {/* شريط الميزات */}
-          <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-2 border-t border-white/10 pt-4 text-xs font-bold text-blue-100">
-            <span className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5">
-              📶 باقات متنوعة
-            </span>
-            <span className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5">
-              ⚡ شحن سريع
-            </span>
-            <span className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5">
-              📍 من أي مكان
-            </span>
-            <span className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5">
-              🛡️ دائماً متصل
-            </span>
-          </div>
-        </aside>
-
-        <div className="p-6 sm:p-9">
-          <div className="mb-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1.5">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
-                mode === "login" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              تسجيل الدخول
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
-                mode === "register" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              حساب جديد
-            </button>
-          </div>
-
-          {mode === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <h3 className="text-xl font-black text-slate-950">تسجيل الدخول</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  أدخل البريد الإلكتروني أو رقم الهاتف وكلمة المرور للمتابعة.
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                  <Mail className="h-4 w-4 text-blue-600" />
-                  البريد الإلكتروني أو رقم الهاتف
-                </label>
-                <Input
-                  placeholder="أدخل البريد الإلكتروني أو رقم الهاتف"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="h-12 text-right font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                  <LockKeyhole className="h-4 w-4 text-blue-600" />
-                  كلمة المرور
-                </label>
-                <Input
-                  type="password"
-                  placeholder="أدخل كلمة المرور"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loginMutation.isPending}
-                className="h-12 w-full bg-blue-600 font-black text-white hover:bg-blue-700"
-              >
-                <LogIn className="ml-2 h-5 w-5" />
-                {loginMutation.isPending ? "جارٍ تسجيل الدخول…" : "دخول الحساب"}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-5">
-              <div>
-                <h3 className="text-xl font-black text-slate-950">إنشاء حساب جديد</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  سجّل بياناتك للاستفادة من خدمات الشامل وشحن المحفظة وحفظ الكروت.
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                  <UserRoundPlus className="h-4 w-4 text-blue-600" />
-                  الاسم الرباعي
-                </label>
-                <Input
-                  placeholder="مثال: محمد أحمد صالح علي"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                  <Mail className="h-4 w-4 text-blue-600" />
-                  رقم الهاتف أو البريد الإلكتروني
-                </label>
-                <Input
-                  placeholder="أدخل رقم الهاتف أو البريد الإلكتروني"
-                  value={phoneOrEmail}
-                  onChange={(e) => setPhoneOrEmail(e.target.value)}
-                  className="h-12 text-right"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                  <LockKeyhole className="h-4 w-4 text-blue-600" />
-                  كلمة المرور
-                </label>
-                <Input
-                  type="password"
-                  placeholder="كلمة مرور مكونة من 4 خانات على الأقل"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={registerMutation.isPending}
-                className="h-12 w-full bg-emerald-600 font-black text-white hover:bg-emerald-700"
-              >
-                <BadgeCheck className="ml-2 h-5 w-5" />
-                {registerMutation.isPending ? "جارٍ إنشاء الحساب…" : "تأكيد التسجيل والدخول"}
-              </Button>
-            </form>
-          )}
+    <Card className="shamel-auth-card mt-6 mx-auto max-w-lg overflow-hidden bg-white shadow-xl border border-blue-100 rounded-3xl p-6 sm:p-8">
+      {/* الشعار الرسمي في المنتصف */}
+      <div className="flex flex-col items-center text-center mb-6">
+        <div className="mb-3 flex justify-center rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-md">
+          <img
+            src={logoUrl}
+            alt="شعار الشامل لخدمات الإنترنت"
+            className="h-14 sm:h-16 w-auto object-contain block select-none"
+          />
         </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> نظام آمن وموثوق
+        </span>
+        <h3 className="mt-2 text-xl font-black text-slate-950">
+          بوابة الشامل نت لخدمات الإنترنت
+        </h3>
+        <p className="mt-1 text-xs text-slate-500">
+          سجل دخولك أو أنشئ حسابك للاستفادة من باقات وكروت الإنترنت وشحن المحفظة
+        </p>
+      </div>
+
+      {/* التبديل بين تسجيل الدخول وحساب جديد */}
+      <div className="mb-6 grid grid-cols-2 rounded-xl bg-slate-100 p-1.5">
+        <button
+          type="button"
+          onClick={() => setMode("login")}
+          className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
+            mode === "login" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          تسجيل الدخول
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("register")}
+          className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
+            mode === "register" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          حساب جديد
+        </button>
+      </div>
+
+      {mode === "login" ? (
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+              <Mail className="h-4 w-4 text-blue-600" />
+              البريد الإلكتروني أو رقم الهاتف
+            </label>
+            <Input
+              placeholder="أدخل البريد الإلكتروني أو رقم الهاتف"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="h-12 text-right font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+              <LockKeyhole className="h-4 w-4 text-blue-600" />
+              كلمة المرور
+            </label>
+            <Input
+              type="password"
+              placeholder="أدخل كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loginMutation.isPending}
+            className="h-12 w-full bg-blue-600 font-black text-white hover:bg-blue-700 shadow-md cursor-pointer transition active:scale-95 text-sm sm:text-base"
+          >
+            <LogIn className="ml-2 h-5 w-5" />
+            {loginMutation.isPending ? "جارٍ تسجيل الدخول…" : "دخول الحساب"}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+              <UserRoundPlus className="h-4 w-4 text-blue-600" />
+              الاسم الرباعي
+            </label>
+            <Input
+              placeholder="مثال: محمد أحمد صالح علي"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="h-12"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+              <Mail className="h-4 w-4 text-blue-600" />
+              رقم الهاتف أو البريد الإلكتروني
+            </label>
+            <Input
+              placeholder="أدخل رقم الهاتف أو البريد الإلكتروني"
+              value={phoneOrEmail}
+              onChange={(e) => setPhoneOrEmail(e.target.value)}
+              className="h-12 text-right"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+              <LockKeyhole className="h-4 w-4 text-blue-600" />
+              كلمة المرور
+            </label>
+            <Input
+              type="password"
+              placeholder="كلمة مرور مكونة من 4 خانات على الأقل"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={registerMutation.isPending}
+            className="h-12 w-full bg-emerald-600 font-black text-white hover:bg-emerald-700 shadow-md cursor-pointer transition active:scale-95 text-sm sm:text-base"
+          >
+            <BadgeCheck className="ml-2 h-5 w-5" />
+            {registerMutation.isPending ? "جارٍ إنشاء الحساب…" : "تأكيد التسجيل والدخول"}
+          </Button>
+        </form>
+      )}
+
+      {/* ميزات سريعة خفيفة أسفل النموذج */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2 border-t border-slate-100 pt-4 text-[11px] font-bold text-slate-500">
+        <span className="rounded-lg bg-slate-50 px-2.5 py-1">📶 باقات متنوعة</span>
+        <span className="rounded-lg bg-slate-50 px-2.5 py-1">⚡ شحن سريع</span>
+        <span className="rounded-lg bg-slate-50 px-2.5 py-1">📍 من أي مكان</span>
+        <span className="rounded-lg bg-slate-50 px-2.5 py-1">🛡️ حماية وأمان</span>
       </div>
     </Card>
   );
