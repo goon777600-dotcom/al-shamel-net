@@ -294,13 +294,13 @@ export default function Store() {
           </div>
         ) : (
           <>
+            <AnnouncementHero onAction={handleAnnouncementAction} />
+
             {!user && (
               <div className="mb-6">
                 <LoginCard />
               </div>
             )}
-
-            <AnnouncementHero onAction={handleAnnouncementAction} />
 
             {user && (
               <Card className="shamel-wallet mt-6 border-0 text-white shadow-xl">
