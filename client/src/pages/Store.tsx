@@ -11,6 +11,7 @@ import PurchaseSuccessModal from "@/components/PurchaseSuccessModal";
 import LoginCard from "@/components/LoginCard";
 import AnnouncementHero from "@/components/AnnouncementHero";
 import UserManagerSettings from "@/components/UserManagerSettings";
+import InstallPwaBanner from "@/components/InstallPwaBanner";
 
 type PackageSize = "small" | "medium" | "large" | "huge";
 
@@ -294,6 +295,7 @@ export default function Store() {
           </div>
         ) : (
           <>
+            <InstallPwaBanner />
             <AnnouncementHero onAction={handleAnnouncementAction} />
 
             {!user && (
