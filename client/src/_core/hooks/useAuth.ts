@@ -63,10 +63,21 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    try {
+      if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+        if (meQuery.data) {
+          localStorage.setItem(
+            "manus-runtime-user-info",
+            JSON.stringify(meQuery.data)
+          );
+        } else {
+          localStorage.removeItem("manus-runtime-user-info");
+        }
+      }
+    } catch {
+      // Safe fallback: storage may be blocked in private mode, WebView, or standalone PWA
+    }
+
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
