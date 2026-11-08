@@ -419,7 +419,7 @@ export async function createCardDirectlyInUserManager(options: {
   let routerMessage: string | undefined;
 
   const mode = router.mode === "usermanager_v7" ? "v7" : "v6";
-  const profileName = options.routerProfileName || undefined;
+  const profileName = options.routerProfileName?.trim().replace(/\s+/g, " ") || undefined;
 
   const executeAddCard = async (client: RouterosClient) => {
     if (router.mode === "hotspot") {

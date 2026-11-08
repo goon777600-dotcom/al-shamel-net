@@ -1046,6 +1046,8 @@ type NewPackageDraft = Omit<PackageDraft, "id">;
 function PackageManager() {
   const utils = trpc.useUtils();
   const { data: packages = [], isLoading } = trpc.packages.listAdmin.useQuery();
+  const { data: routerProfilesData } = trpc.router.getProfiles.useQuery();
+  const routerProfiles = routerProfilesData?.profiles || [];
   const [draft, setDraft] = useState<PackageDraft | null>(null);
   const [newDraft, setNewDraft] = useState<NewPackageDraft | null>(null);
 
@@ -1214,15 +1216,52 @@ function PackageManager() {
             {/* Router Profile Mapping */}
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600">بروفايل اليوزرمانجر (Profile Name)</label>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-600">بروفايل اليوزرمانجر بالراوتر</label>
+                  {routerProfiles.length > 0 && (
+                    <span className="text-[10px] font-bold text-emerald-600">✓ {routerProfiles.length} بروفايل متاح</span>
+                  )}
+                </div>
                 <input
+                  list="router-profiles-list"
                   value={newDraft.routerProfileName || ""}
-                  onChange={event =>
-                    setNewDraft(current => (current ? { ...current, routerProfileName: event.target.value } : current))
-                  }
-                  placeholder="مثال: profile-200"
+                  onChange={event => {
+                    const val = event.target.value;
+                    const matched = routerProfiles.find(p => p.name.trim() === val.trim());
+                    setNewDraft(current => {
+                      if (!current) return current;
+                      const next = { ...current, routerProfileName: val };
+                      if (matched?.validity && !current.timeLimit) next.timeLimit = matched.validity;
+                      return next;
+                    });
+                  }}
+                  placeholder="اختر أو اكتب (مثال: 5000 RY)"
                   className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-500"
                 />
+                {routerProfiles.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {routerProfiles.map(p => (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() =>
+                          setNewDraft(current =>
+                            current
+                              ? { ...current, routerProfileName: p.name, timeLimit: p.validity || current.timeLimit }
+                              : current
+                          )
+                        }
+                        className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold transition-all ${
+                          newDraft.routerProfileName === p.name
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-600">مدة الصلاحية (Time Limit)</label>
@@ -1346,15 +1385,52 @@ function PackageManager() {
                     {/* Router Profile Mapping in Edit Form */}
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div>
-                        <label className="mb-1 block text-xs font-bold text-slate-600">بروفايل اليوزرمانجر</label>
+                        <div className="mb-1 flex items-center justify-between">
+                          <label className="block text-xs font-bold text-slate-600">بروفايل اليوزرمانجر بالراوتر</label>
+                          {routerProfiles.length > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-600">✓ {routerProfiles.length} بروفايل متاح</span>
+                          )}
+                        </div>
                         <input
+                          list="router-profiles-list"
                           value={draft.routerProfileName || ""}
-                          onChange={event =>
-                            setDraft(current => (current ? { ...current, routerProfileName: event.target.value } : current))
-                          }
-                          placeholder="مثال: profile-200"
+                          onChange={event => {
+                            const val = event.target.value;
+                            const matched = routerProfiles.find(p => p.name.trim() === val.trim());
+                            setDraft(current => {
+                              if (!current) return current;
+                              const next = { ...current, routerProfileName: val };
+                              if (matched?.validity && !current.timeLimit) next.timeLimit = matched.validity;
+                              return next;
+                            });
+                          }}
+                          placeholder="اختر أو اكتب (مثال: 5000 RY)"
                           className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-500"
                         />
+                        {routerProfiles.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {routerProfiles.map(p => (
+                              <button
+                                key={p.name}
+                                type="button"
+                                onClick={() =>
+                                  setDraft(current =>
+                                    current
+                                      ? { ...current, routerProfileName: p.name, timeLimit: p.validity || current.timeLimit }
+                                      : current
+                                  )
+                                }
+                                className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold transition-all ${
+                                  draft.routerProfileName === p.name
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                                }`}
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">مدة الصلاحية</label>
@@ -1363,7 +1439,7 @@ function PackageManager() {
                           onChange={event =>
                             setDraft(current => (current ? { ...current, timeLimit: event.target.value } : current))
                           }
-                          placeholder="مثال: 3h"
+                          placeholder="مثال: 3h أو 4w2d"
                           className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-500"
                         />
                       </div>
@@ -1374,7 +1450,7 @@ function PackageManager() {
                           onChange={event =>
                             setDraft(current => (current ? { ...current, dataLimit: event.target.value } : current))
                           }
-                          placeholder="مثال: 500MB"
+                          placeholder="مثال: 500MB أو 10.0 GiB"
                           className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-500"
                         />
                       </div>
@@ -1456,8 +1532,15 @@ function PackageManager() {
                           {pkg.isActive ? "ظاهر للعميل" : "مخفي"}
                         </span>
                         {pkg.routerProfileName && (
-                          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-800">
-                            بروفايل: {pkg.routerProfileName}
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${
+                              routerProfiles.some(p => p.name === pkg.routerProfileName)
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                : "border-blue-200 bg-blue-50 text-blue-800"
+                            }`}
+                          >
+                            {routerProfiles.some(p => p.name === pkg.routerProfileName) ? "✓ متزامن: " : "بروفايل: "}
+                            {pkg.routerProfileName}
                           </span>
                         )}
                       </div>
@@ -1495,6 +1578,13 @@ function PackageManager() {
           </div>
         )}
       </Card>
+      <datalist id="router-profiles-list">
+        {routerProfiles.map(p => (
+          <option key={p.name} value={p.name}>
+            {p.name} {p.validity ? `(الصلاحية: ${p.validity})` : ""} {p.price ? `(السعر بالراوتر: ${p.price} ريال)` : ""}
+          </option>
+        ))}
+      </datalist>
     </section>
   );
 }

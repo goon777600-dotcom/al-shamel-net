@@ -301,8 +301,27 @@ export class RouterosClient {
         return reject(new Error("الموجّه غير متصل حالياً"));
       }
 
-      this.pendingResolves.push(resolve);
-      this.pendingRejects.push(reject);
+      // Command timeout safeguard (10 seconds)
+      const cmdTimer = setTimeout(() => {
+        const resIdx = this.pendingResolves.indexOf(wrappedResolve);
+        if (resIdx !== -1) {
+          this.pendingResolves.splice(resIdx, 1);
+          this.pendingRejects.splice(resIdx, 1);
+        }
+        reject(new Error("انتهت مهلة استجابة الراوتر للأمر (تجاوز 10 ثوانٍ)"));
+      }, 10_000);
+
+      const wrappedResolve = (val: string[][]) => {
+        clearTimeout(cmdTimer);
+        resolve(val);
+      };
+      const wrappedReject = (err: any) => {
+        clearTimeout(cmdTimer);
+        reject(err);
+      };
+
+      this.pendingResolves.push(wrappedResolve);
+      this.pendingRejects.push(wrappedReject);
 
       const buffers: Buffer[] = [];
       for (const word of words) {
@@ -392,7 +411,11 @@ export class RouterosClient {
   async executeCommand(command: string, params: Record<string, string> = {}): Promise<{ records: Record<string, string>[]; ret?: string }> {
     const words = [command];
     for (const [k, v] of Object.entries(params)) {
-      words.push(`=${k}=${v}`);
+      if (k.startsWith("?")) {
+        words.push(`${k}=${v}`);
+      } else {
+        words.push(`=${k}=${v}`);
+      }
     }
     const resp = await this.sendSentence(words);
     const done = resp.find((s) => s[0] === "!done");
@@ -534,14 +557,52 @@ export class RouterosClient {
 
       // If a profile is specified, create and activate it for this user using its router ID (*xxxx)
       if (card.profileName) {
+        let cleanProfile = card.profileName.trim().replace(/\s+/g, " ");
+        let activated = false;
+        let lastError = "";
+
+        // 1. Try direct activation with space-normalized profile name
         try {
           await this.runCommand("/tool/user-manager/user/create-and-activate-profile", {
             customer,
             numbers: userRef,
-            profile: card.profileName,
+            profile: cleanProfile,
           });
+          activated = true;
         } catch (e: any) {
-          console.warn("[UserManager] Could not activate profile for user:", e.message);
+          lastError = e.message;
+          console.warn(`[UserManager] Direct profile activation failed for "${cleanProfile}":`, e.message);
+        }
+
+        // 2. If direct activation failed, fetch router profiles and fuzzy match
+        if (!activated) {
+          try {
+            const umProfiles = await this.getUserManagerProfiles();
+            const matched = umProfiles.profiles.find(
+              (p) => p.name.replace(/\s+/g, "").toLowerCase() === cleanProfile.replace(/\s+/g, "").toLowerCase()
+            );
+            if (matched && matched.name !== cleanProfile) {
+              console.log(`[UserManager] Fuzzy matching profile "${cleanProfile}" -> "${matched.name}". Retrying...`);
+              await this.runCommand("/tool/user-manager/user/create-and-activate-profile", {
+                customer,
+                numbers: userRef,
+                profile: matched.name,
+              });
+              activated = true;
+            }
+          } catch (retryErr: any) {
+            console.warn("[UserManager] Profile fuzzy matching error:", retryErr.message);
+          }
+        }
+
+        // 3. If STILL not activated, clean up orphaned unprofiled user and fail safely
+        if (!activated) {
+          try {
+            await this.runCommand("/tool/user-manager/user/remove", { numbers: userRef });
+          } catch {}
+          throw new Error(
+            `فشل تفعيل البروفايل (${cleanProfile}) على الراوتر: ${lastError || "البروفايل غير موجود في قائمة بروفايلات اليوزرمانجر"}`
+          );
         }
       }
       return { success: true };
