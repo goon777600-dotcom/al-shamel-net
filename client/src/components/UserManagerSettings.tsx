@@ -31,31 +31,30 @@ export default function UserManagerSettings() {
     staleTime: 60_000,
   });
 
-  const [host, setHost] = useState("100.100.100.1");
-  const [apiPort, setApiPort] = useState(8728);
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
-  const [customerPassword, setCustomerPassword] = useState("");
-  const [useTls, setUseTls] = useState(false);
-  const [mode, setMode] = useState<"usermanager_v6" | "usermanager_v7" | "hotspot">("usermanager_v6");
-  const [customer, setCustomer] = useState("admin");
-  const [loginUrl, setLoginUrl] = useState("http://100.100.100.1");
+  const [host, setHost] = useState(config?.host || "ip2.ttye.me:12861/userman");
+  const [apiPort, setApiPort] = useState(config?.apiPort || 12862);
+  const [username, setUsername] = useState(config?.username || "shaml");
+  const [password, setPassword] = useState(config?.password || "shaml@6060@6060");
+  const [useTls, setUseTls] = useState(Boolean(config?.useTls));
+  const [mode, setMode] = useState<"usermanager_v6" | "usermanager_v7" | "hotspot">(
+    (config?.mode as any) || "usermanager_v6"
+  );
+  const [customer, setCustomer] = useState(config?.customer || "shaml");
+  const [loginUrl, setLoginUrl] = useState(config?.loginUrl || "http://100.100.100.1");
   const [showPassword, setShowPassword] = useState(false);
-  const [showCustomerPassword, setShowCustomerPassword] = useState(false);
 
   const [testResult, setTestResult] = useState<any>(null);
   const [testCardResult, setTestCardResult] = useState<any>(null);
 
   useEffect(() => {
     if (config) {
-      setHost(config.host || "100.100.100.1");
-      setApiPort(config.apiPort || 8728);
-      setUsername(config.username || "admin");
-      setPassword(config.password || "");
-      setCustomerPassword((config as any)?.customerPassword || "");
+      setHost(config.host || "ip2.ttye.me:12861/userman");
+      setApiPort(config.apiPort || 12862);
+      setUsername(config.username || "shaml");
+      setPassword(config.password || "shaml@6060@6060");
       setUseTls(Boolean(config.useTls));
       setMode((config.mode as any) || "usermanager_v6");
-      setCustomer(config.customer || "admin");
+      setCustomer(config.customer || "shaml");
       setLoginUrl(config.loginUrl || "http://100.100.100.1");
     }
   }, [config]);
@@ -63,7 +62,7 @@ export default function UserManagerSettings() {
   const saveMutation = trpc.userManager.saveConfig.useMutation({
     onSuccess: async () => {
       await utils.userManager.getConfig.invalidate();
-      toast.success("تم حفظ إعدادات خادم اليوزر مانجر بنجاح");
+      toast.success("تم حفظ إعدادات خادم اليوزر مانجر بنجاح وبأمان تام");
     },
     onError: (err) => {
       toast.error(err.message || "تعذر حفظ الإعدادات");
@@ -111,7 +110,7 @@ export default function UserManagerSettings() {
       apiPort: toWesternDigits(apiPort),
       username: username.trim(),
       password,
-      customerPassword,
+      customerPassword: "",
       useTls,
       mode,
       customer: customer.trim(),
@@ -129,6 +128,18 @@ export default function UserManagerSettings() {
       useTls,
     });
   };
+
+  if (isLoading) {
+    return (
+      <section id="usermanager-settings" className="mt-6">
+        <Card className="overflow-hidden border border-blue-200 bg-white/95 p-8 text-center shadow-xl">
+          <RefreshCw className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="font-bold text-slate-800">جارٍ قراءة إعدادات الراوتر المحفوظة بأمان...</p>
+          <p className="text-xs text-slate-500 mt-1">يتم جلب البيانات الحالية من قاعدة البيانات المشفرة</p>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section id="usermanager-settings" className="mt-6">
@@ -261,13 +272,13 @@ export default function UserManagerSettings() {
                 <input
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
-                  placeholder="100.100.100.1 أو http://100.100.100.1/userman"
+                  placeholder="ip2.ttye.me:12861/userman"
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-3 pr-10 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
                 <Server className="absolute right-3 top-3 h-5 w-5 text-slate-400" />
               </div>
               <p className="mt-1 text-[11px] text-slate-500">
-                عنوان الآي بي للراوتر أو رابط اليوزرمانجر (تم ضبطه تلقائياً على 100.100.100.1).
+                رابط أو عنوان خادم الميكروتك في النفق (مثال: ip2.ttye.me:12861/userman).
               </p>
             </div>
 
@@ -281,11 +292,11 @@ export default function UserManagerSettings() {
                 inputMode="numeric"
                 value={apiPort}
                 onChange={(e) => setApiPort(toWesternDigits(e.target.value))}
-                placeholder="12862 أو 8728"
+                placeholder="12862"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
               <p className="mt-1 text-[11px] text-slate-500">
-                منفذ خدمة الـ API (الافتراضي 8728 محلياً، أو منفذ الـ API في النفق مثل <strong>12862</strong>).
+                منفذ خدمة الـ API للراوتر في النفق (الافتراضي: <strong>12862</strong>).
               </p>
               {String(apiPort) === "12861" && (
                 <p className="mt-1.5 text-xs font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
@@ -306,7 +317,7 @@ export default function UserManagerSettings() {
                 <option value="usermanager_v7">User Manager v7 (RouterOS v7.x)</option>
                 <option value="hotspot">Hotspot ميكروتك المباشر (/ip/hotspot)</option>
               </select>
-              <p className="mt-1 text-[11px] text-slate-500">اختر نوع نظام إدارة المستخدمين المفعّل في الميكروتك.</p>
+              <p className="mt-1 text-[11px] text-slate-500">نوع نظام إدارة المستخدمين في الميكروتك (User Manager v6).</p>
             </div>
 
             {/* Username */}
@@ -317,9 +328,10 @@ export default function UserManagerSettings() {
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="shaml"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
+              <p className="mt-1 text-[11px] text-slate-500">اسم المستخدم المضاف في Winbox بصلاحية Full (مثال: shaml).</p>
             </div>
 
             {/* Winbox Password */}
@@ -344,33 +356,7 @@ export default function UserManagerSettings() {
                 </button>
               </div>
               <p className="mt-1 text-[11px] text-blue-700 font-bold">
-                👈 ضع هنا كلمة السر التي تكتبها عند الدخول لراوتر الميكروتك عبر برنامج Winbox.
-              </p>
-            </div>
-
-            {/* User Manager Web Password */}
-            <div>
-              <label className="mb-1.5 flex items-center justify-between text-xs font-black text-slate-800">
-                <span>🌐 كلمة سر صفحة اليوزرمانجر (Web Login)</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showCustomerPassword ? "text" : "password"}
-                  value={customerPassword}
-                  onChange={(e) => setCustomerPassword(e.target.value)}
-                  placeholder="كلمة سر صفحة اليوزرمانجر بالمتصفح"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCustomerPassword(!showCustomerPassword)}
-                  className="absolute left-3 top-3 text-slate-400 hover:text-slate-600"
-                >
-                  {showCustomerPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              <p className="mt-1 text-[11px] text-emerald-700 font-bold">
-                👈 ضع هنا كلمة السر التي تكتبها عند الدخول لليوزرمانجر بالمتصفح http://100.100.100.1/userman.
+                👈 كلمة السر المعتمدة لحساب ({username || "shaml"}) في Winbox.
               </p>
             </div>
 
@@ -380,10 +366,10 @@ export default function UserManagerSettings() {
               <input
                 value={customer}
                 onChange={(e) => setCustomer(e.target.value)}
-                placeholder="admin"
+                placeholder="shaml"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
-              <p className="mt-1 text-[11px] text-slate-500">اسم حساب المشرف داخل اليوزرمانجر (الافتراضي: admin).</p>
+              <p className="mt-1 text-[11px] text-slate-500">اسم حساب المشرف داخل اليوزرمانجر (Customer: shaml).</p>
             </div>
 
             {/* Login URL */}

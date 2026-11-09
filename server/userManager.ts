@@ -105,14 +105,14 @@ export async function getActiveRouterConfig() {
   return {
     id: 1,
     name: "خادم اليوزرمانجر الرئيسي",
-    host: process.env.USERMANAGER_URL || "100.100.100.1",
-    apiPort: 8728,
-    username: process.env.USERMANAGER_USER || "admin",
-    password: process.env.USERMANAGER_PASSWORD || "",
+    host: process.env.USERMANAGER_URL || "ip2.ttye.me:12861/userman",
+    apiPort: 12862,
+    username: process.env.USERMANAGER_USER || "shaml",
+    password: process.env.USERMANAGER_PASSWORD || "shaml@6060@6060",
     customerPassword: "",
     useTls: false,
     mode: "usermanager_v6" as const,
-    customer: "admin",
+    customer: "shaml",
     status: "unknown" as const,
     loginUrl: "http://100.100.100.1",
     systemIdentity: null,
@@ -149,7 +149,7 @@ export async function testUserManagerConnection(customConfig?: {
     user,
     password,
     useTls,
-    timeoutMs: 4000,
+    timeoutMs: 10000,
   });
 
   try {
@@ -320,7 +320,7 @@ export async function getSharedRouterosClient(forceNew = false): Promise<Routero
       user: router.username,
       password: router.password,
       useTls: router.useTls,
-      timeoutMs: 4500,
+      timeoutMs: 12000,
     });
 
     await client.connect();
@@ -463,15 +463,24 @@ export async function createCardDirectlyInUserManager(options: {
       syncedToRouter = true;
       routerMessage = `تم إنشاء الكرت بنجاح داخل اليوزر مانجر بروفايل (${profileName || "افتراضي"})`;
     } catch (retryErr: any) {
-      console.warn("[UserManager] Card created, direct router sync failed:", retryErr.message);
-      routerMessage = `تم توليد الكرت بنجاح (${retryErr.message})`;
+      console.error("[UserManager] Direct router card creation failed:", retryErr.message);
+      // Strictly fail: NEVER issue an offline or fake card to a customer!
+      throw new Error(
+        `تعذر الاتصال براوتر الشبكة لإنشاء وتفعيل الكرت (${retryErr.message || "انتهت المهلة"}). لم يتم خصم أي رصيد من محفظتك. يرجى المحاولة بعد قليل.`
+      );
     }
+  }
+
+  if (!syncedToRouter) {
+    throw new Error(
+      "تعذر تأكيد ربط الكرت بالراوتر. لم يتم خصم أي رصيد من محفظتك."
+    );
   }
 
   return {
     pinCode,
     cardPassword,
-    syncedToRouter,
+    syncedToRouter: true,
     routerMessage,
     loginUrl: router.loginUrl || "http://100.100.100.1",
   };

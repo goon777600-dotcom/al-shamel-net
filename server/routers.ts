@@ -476,6 +476,12 @@ export const appRouter = router({
             userId: ctx.user.id,
           });
 
+          if (!cardResult || !cardResult.syncedToRouter) {
+            throw new Error(
+              "تعذر تأكيد تفعيل الكرت في راوتر الميكروتك. لم يتم خصم أي رصيد من محفظتك."
+            );
+          }
+
           const newBalance = (currentBalance - packagePrice).toFixed(2);
           const newTotalSpent = (parseFloat(wallet.totalSpent) + packagePrice).toFixed(2);
 
