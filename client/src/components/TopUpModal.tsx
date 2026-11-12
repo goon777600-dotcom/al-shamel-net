@@ -26,6 +26,11 @@ export default function TopUpModal({ open, onOpenChange }: TopUpModalProps) {
 
   const { data: dbMethods = [] } = trpc.paymentMethods.getAllActive.useQuery();
 
+  const { data: limitStatus, refetch: refetchLimitStatus } = trpc.topUp.getDailyLimitStatus.useQuery(
+    undefined,
+    { enabled: Boolean(user && open) }
+  );
+
   const paymentMethods = useMemo(() => {
     if (dbMethods && dbMethods.length > 0) {
       return dbMethods.map((m) => ({
@@ -103,6 +108,7 @@ export default function TopUpModal({ open, onOpenChange }: TopUpModalProps) {
       setAmount("");
       setReferenceNumber("");
       setNotes("");
+      refetchLimitStatus();
       onOpenChange(false);
     },
     onError: (err) => {
@@ -134,6 +140,10 @@ export default function TopUpModal({ open, onOpenChange }: TopUpModalProps) {
       toast.error("يرجى تسجيل الدخول أولاً لتتمكن من إرسال طلب الشحن.");
       onOpenChange(false);
       document.querySelector(".shamel-auth-card")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (limitStatus && !limitStatus.canSubmit) {
+      toast.error(`عذراً، لقد استهلكت الحد المسموح به لطلبات الشحن اليوم (${limitStatus.maxDailyRequests} طلبات يومياً). يرجى الانتظار حتى الغد أو التواصل مع الإدارة عبر الواتساب.`);
       return;
     }
     const num = parseFloat(amount);
@@ -210,6 +220,45 @@ export default function TopUpModal({ open, onOpenChange }: TopUpModalProps) {
 
         {activeTab === "request" ? (
           <form onSubmit={handleSubmit} className="space-y-3.5 mt-2">
+            {user && limitStatus && (
+              <div
+                className={`rounded-xl border p-2.5 text-xs font-bold flex items-center justify-between shadow-xs ${
+                  limitStatus.canSubmit
+                    ? "bg-blue-50/80 border-blue-200 text-blue-900"
+                    : "bg-rose-50 border-rose-300 text-rose-900"
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">{limitStatus.canSubmit ? "⚡" : "⚠️"}</span>
+                  <span>
+                    {limitStatus.canSubmit
+                      ? `الطلبات المتبقية لك اليوم: ${limitStatus.remainingToday} من أصل ${limitStatus.maxDailyRequests}`
+                      : "استنفدت الحد اليومي للشحن (طلبان اثنان في اليوم)"}
+                  </span>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    limitStatus.canSubmit
+                      ? "bg-blue-200 text-blue-950"
+                      : "bg-rose-200 text-rose-950"
+                  }`}
+                >
+                  {limitStatus.usedToday}/{limitStatus.maxDailyRequests} اليوم
+                </span>
+              </div>
+            )}
+
+            {user && limitStatus && !limitStatus.canSubmit && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-3 text-right">
+                <p className="text-xs font-black text-rose-900 leading-relaxed">
+                  🚫 تم إيقاف تقديم طلبات شحن إضافية اليوم (الحد الأقصى: طلبان يومياً).
+                </p>
+                <p className="text-[11px] text-rose-700 mt-1 font-bold">
+                  سيتم فتح إمكانية تقديم الطلبات مجدداً غداً بإذن الله. إذا كنت قد قمت بالتحويل، يمكنك النقر على زر الواتساب بالأسفل لإرسال صورة السند مباشرة للإدارة لتأكيد شحنك.
+                </p>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-black text-slate-800">
@@ -289,11 +338,19 @@ export default function TopUpModal({ open, onOpenChange }: TopUpModalProps) {
 
             <Button
               type="submit"
-              disabled={submitMutation.isPending}
-              className="w-full h-11 bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-950 font-black text-white shadow-md cursor-pointer transition active:scale-95"
+              disabled={submitMutation.isPending || Boolean(limitStatus && !limitStatus.canSubmit)}
+              className={`w-full h-11 font-black text-white shadow-md transition ${
+                limitStatus && !limitStatus.canSubmit
+                  ? "bg-slate-400 cursor-not-allowed opacity-80"
+                  : "bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-950 cursor-pointer active:scale-95"
+              }`}
             >
               <Send className="ml-2 h-4 w-4" />
-              {submitMutation.isPending ? "جارٍ إرسال الطلب…" : "إرسال طلب الشحن للإدارة"}
+              {submitMutation.isPending
+                ? "جارٍ إرسال الطلب…"
+                : limitStatus && !limitStatus.canSubmit
+                ? "تم استهلاك الحد اليومي (طلبان باليوم)"
+                : "إرسال طلب الشحن للإدارة"}
             </Button>
 
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-center">

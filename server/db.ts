@@ -145,6 +145,46 @@ export async function getUserByIdentifier(identifier: string) {
   });
 }
 
+/**
+ * Normalizes Arabic text for duplicate checking:
+ * - Strips diacritics / tashkeel
+ * - Strips tatweel / kashida
+ * - Unifies alefs (أ, إ, آ, ٱ -> ا)
+ * - Unifies yaa / alif maqsura (ى -> ي)
+ * - Unifies taa marbuta and haa (ة -> ه)
+ * - Collapses whitespace
+ */
+export function normalizeArabicName(name: string): string {
+  if (!name) return "";
+  return name
+    .trim()
+    .replace(/[\u064B-\u065F\u0670]/g, "") // Diacritics
+    .replace(/\u0640/g, "") // Tatweel
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/[ى]/g, "ي")
+    .replace(/[ة]/g, "ه")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+export async function findUserWithDuplicateName(
+  name: string,
+  excludeUserId?: number
+): Promise<{ id: number; name: string | null } | undefined> {
+  const normalizedTarget = normalizeArabicName(name);
+  if (!normalizedTarget || normalizedTarget.length < 3) return undefined;
+
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const allUsers = await db.select({ id: users.id, name: users.name }).from(users);
+  return allUsers.find((u) => {
+    if (excludeUserId && u.id === excludeUserId) return false;
+    if (!u.name) return false;
+    return normalizeArabicName(u.name) === normalizedTarget;
+  });
+}
+
 export async function createUserWithPassword(params: {
   name: string;
   phoneOrEmail: string;
@@ -786,6 +826,34 @@ export async function getUserTopUpRequests(userId: number) {
     .from(topUpRequests)
     .where(eq(topUpRequests.userId, userId))
     .orderBy(desc(topUpRequests.createdAt));
+}
+
+/**
+ * Calculate start of day in Yemen time (Asia/Aden, UTC+3)
+ */
+export function getYemenStartOfDay(date = new Date()): Date {
+  const yemenOffsetMs = 3 * 60 * 60 * 1000;
+  const yemenNow = new Date(date.getTime() + yemenOffsetMs);
+  const yemenMidnight = new Date(
+    Date.UTC(yemenNow.getUTCFullYear(), yemenNow.getUTCMonth(), yemenNow.getUTCDate(), 0, 0, 0, 0)
+  );
+  return new Date(yemenMidnight.getTime() - yemenOffsetMs);
+}
+
+export async function getTodayUserTopUpCount(userId: number, date = new Date()): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const startOfDay = getYemenStartOfDay(date);
+  const rows = await db
+    .select({ id: topUpRequests.id })
+    .from(topUpRequests)
+    .where(
+      and(
+        eq(topUpRequests.userId, userId),
+        gte(topUpRequests.createdAt, startOfDay)
+      )
+    );
+  return rows.length;
 }
 
 export async function approveTopUpRequest(

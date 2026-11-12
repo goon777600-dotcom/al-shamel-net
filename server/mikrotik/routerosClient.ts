@@ -161,6 +161,9 @@ export class RouterosClient {
                 if (this.socket && "setNoDelay" in this.socket) {
                   this.socket.setNoDelay(true);
                 }
+                if (this.socket && "setKeepAlive" in this.socket) {
+                  this.socket.setKeepAlive(true, 5000);
+                }
                 this.setupDataHandler();
                 resolve();
               }
@@ -180,6 +183,9 @@ export class RouterosClient {
                 this.connected = true;
                 if (this.socket && "setNoDelay" in this.socket) {
                   this.socket.setNoDelay(true);
+                }
+                if (this.socket && "setKeepAlive" in this.socket) {
+                  this.socket.setKeepAlive(true, 5000);
                 }
                 this.setupDataHandler();
                 resolve();
@@ -206,12 +212,30 @@ export class RouterosClient {
       this.processBuffer();
     });
 
-    this.socket.on("close", () => {
+    const handleSocketDrop = (reason: string) => {
       this.connected = false;
-      const reject = this.pendingRejects.shift();
-      if (reject) {
-        reject(new Error("تم قطع الاتصال بالموجّه بشكل غير متوقع."));
+      this.destroy();
+      while (this.pendingRejects.length > 0) {
+        const reject = this.pendingRejects.shift();
+        this.pendingResolves.shift();
+        if (reject) reject(new Error(reason));
       }
+    };
+
+    this.socket.on("error", (err: any) => {
+      handleSocketDrop(`خطأ في مقبس الراوتر (${err?.code || err?.message || "Socket Error"})`);
+    });
+
+    this.socket.on("end", () => {
+      handleSocketDrop("أنهى الراوتر جلسة الاتصال (Socket End)");
+    });
+
+    this.socket.on("close", () => {
+      handleSocketDrop("تم قطع الاتصال بالموجّه (Socket Closed)");
+    });
+
+    this.socket.on("timeout", () => {
+      handleSocketDrop("انتهت مهلة استجابة مقبس الراوتر (Socket Timeout)");
     });
   }
 
@@ -301,15 +325,16 @@ export class RouterosClient {
         return reject(new Error("الموجّه غير متصل حالياً"));
       }
 
-      // Command timeout safeguard (10 seconds)
+      // Command timeout safeguard (5 seconds for fast failure & recovery)
       const cmdTimer = setTimeout(() => {
         const resIdx = this.pendingResolves.indexOf(wrappedResolve);
         if (resIdx !== -1) {
           this.pendingResolves.splice(resIdx, 1);
           this.pendingRejects.splice(resIdx, 1);
         }
-        reject(new Error("انتهت مهلة استجابة الراوتر للأمر (تجاوز 10 ثوانٍ)"));
-      }, 10_000);
+        this.destroy();
+        reject(new Error("انتهت مهلة استجابة الراوتر للأمر (تجاوز 5 ثوانٍ)"));
+      }, 5_000);
 
       const wrappedResolve = (val: string[][]) => {
         clearTimeout(cmdTimer);
@@ -331,7 +356,18 @@ export class RouterosClient {
       }
       buffers.push(Buffer.from([0])); // End of sentence
 
-      this.socket.write(Buffer.concat(buffers));
+      try {
+        this.socket.write(Buffer.concat(buffers));
+      } catch (writeErr: any) {
+        clearTimeout(cmdTimer);
+        const resIdx = this.pendingResolves.indexOf(wrappedResolve);
+        if (resIdx !== -1) {
+          this.pendingResolves.splice(resIdx, 1);
+          this.pendingRejects.splice(resIdx, 1);
+        }
+        this.destroy();
+        reject(new Error(`فشل إرسال الأمر للراوتر: ${writeErr?.message || "Write error"}`));
+      }
     });
   }
 

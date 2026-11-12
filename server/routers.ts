@@ -12,6 +12,7 @@ import { users } from "../drizzle/schema";
 import {
   getDb,
   getUserByIdentifier,
+  findUserWithDuplicateName,
   createUserWithPassword,
   normalizeIdentifier,
   getUserByOpenId,
@@ -41,6 +42,7 @@ import {
   createTopUpRequest,
   getTopUpRequests,
   getUserTopUpRequests,
+  getTodayUserTopUpCount,
   approveTopUpRequest,
   rejectTopUpRequest,
   getAllUsersForAdmin,
@@ -217,6 +219,15 @@ export const appRouter = router({
             message: `عذراً، رقم الهاتف أو البريد (${raw}) مسجل مسبقاً في النظام باسم (${user.name || "عميل مسجل"}). لا يمكن تسجيل نفس الرقم لحسابين مختلفين. يرجى تسجيل الدخول مباشرة أو إدخال رقم هاتف آخر.`,
           });
         } else {
+          // Check for duplicate customer name (using Arabic normalization)
+          const existingUserWithName = await findUserWithDuplicateName(input.name);
+          if (existingUserWithName) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `عذراً، الاسم (${input.name.trim()}) مسجل مسبقاً في النظام لعميل آخر. لمنع تشابه الأسماء والخلط بين الحسابات، يرجى كتابة اسمك الرباعي الكامل والمميز (مثال: الاسم واللقب الرباعي الكامل).`,
+            });
+          }
+
           user = await createUserWithPassword({
             name: input.name.trim(),
             phoneOrEmail: normalized,
@@ -655,6 +666,18 @@ export const appRouter = router({
   }),
 
   topUp: router({
+    getDailyLimitStatus: protectedProcedure.query(async ({ ctx }) => {
+      const MAX_DAILY_REQUESTS = 2;
+      const usedToday = await getTodayUserTopUpCount(ctx.user.id);
+      const remainingToday = Math.max(0, MAX_DAILY_REQUESTS - usedToday);
+      return {
+        maxDailyRequests: MAX_DAILY_REQUESTS,
+        usedToday,
+        remainingToday,
+        canSubmit: usedToday < MAX_DAILY_REQUESTS,
+      };
+    }),
+
     submitRequest: protectedProcedure
       .input(
         z.object({
@@ -666,6 +689,15 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
+        const MAX_DAILY_REQUESTS = 2;
+        const usedToday = await getTodayUserTopUpCount(ctx.user.id);
+        if (usedToday >= MAX_DAILY_REQUESTS) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: `عذراً، لقد استهلكت الحد الأقصى المسموح به لطلبات الشحن اليوم (${MAX_DAILY_REQUESTS} طلبات يومياً). يرجى الانتظار حتى الغد أو متابعة طلباتك السابقة عبر التواصل مع الإدارة.`,
+          });
+        }
+
         const result = await createTopUpRequest({
           userId: ctx.user.id,
           amount: input.amount.toFixed(2),

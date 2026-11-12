@@ -302,7 +302,7 @@ export async function getSharedRouterosClient(forceNew = false): Promise<Routero
 
   // If already connecting, wait for existing connection attempt
   if (isConnectingShared) {
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 25; i++) {
       await new Promise((r) => setTimeout(r, 100));
       if (sharedClient && sharedClient.isConnected() && sharedConfigKey === configKey) {
         return sharedClient;
@@ -320,24 +320,28 @@ export async function getSharedRouterosClient(forceNew = false): Promise<Routero
       user: router.username,
       password: router.password,
       useTls: router.useTls,
-      timeoutMs: 12000,
+      timeoutMs: 6000,
     });
 
     await client.connect();
     sharedClient = client;
     sharedConfigKey = configKey;
 
-    // Start background keep-alive ping (every 30 seconds) to keep the tunnel socket hot
+    // Start background keep-alive ping (every 10 seconds) to detect reboots and keep tunnel hot
     if (!keepAliveTimer) {
       keepAliveTimer = setInterval(async () => {
-        if (!sharedClient || !sharedClient.isConnected()) return;
+        if (!sharedClient) return;
+        if (!sharedClient.isConnected()) {
+          resetSharedRouterosClient();
+          return;
+        }
         try {
           await sharedClient.runCommand("/system/identity/print");
         } catch (e: any) {
-          console.warn("[UserManager] Keep-alive ping failed, resetting shared client:", e.message);
+          console.warn("[UserManager] Keep-alive ping failed (router rebooted or tunnel dropped), resetting shared client:", e.message);
           resetSharedRouterosClient();
         }
-      }, 30_000);
+      }, 10_000);
     }
 
     return sharedClient;
