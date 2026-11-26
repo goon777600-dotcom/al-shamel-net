@@ -600,7 +600,7 @@ export async function getAdminOverview(period: AdminOverviewPeriod = "today") {
     .innerJoin(packages, eq(purchases.packageId, packages.id))
     .where(purchaseFilter)
     .orderBy(desc(purchases.createdAt))
-    .limit(5);
+    .limit(50);
 
   const recentDeposits = await db
     .select({
@@ -617,7 +617,7 @@ export async function getAdminOverview(period: AdminOverviewPeriod = "today") {
     .leftJoin(users, eq(topUpRequests.userId, users.id))
     .where(depositFilter)
     .orderBy(desc(topUpRequests.createdAt))
-    .limit(8);
+    .limit(1000);
 
   return {
     totalPackages: Number(packageCount?.value ?? 0),
