@@ -114,13 +114,21 @@ export async function getUserByOpenId(openId: string) {
 
 export function normalizeIdentifier(val: string): string {
   if (!val) return "";
-  let clean = val.trim().toLowerCase().replace(/[\s\-\(\)]/g, "");
+  let clean = val.trim().toLowerCase().replace(/[\s\-\(\)\+]/g, "");
   if (clean.includes("@")) return clean;
+  // Replace eastern arabic numerals
+  clean = clean.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+
   // Handle Yemeni phone prefixes (+967, 00967, 967, leading 0)
-  if (clean.startsWith("+967")) clean = clean.slice(4);
-  else if (clean.startsWith("00967")) clean = clean.slice(5);
+  if (clean.startsWith("00967")) clean = clean.slice(5);
   else if (clean.startsWith("967") && clean.length >= 11) clean = clean.slice(3);
-  else if (clean.startsWith("0") && clean.length === 10) clean = clean.slice(1);
+  else if (clean.startsWith("07")) clean = clean.slice(1);
+
+  // Handle Saudi phone prefixes (+966, 00966, 966, leading 0)
+  if (clean.startsWith("00966")) clean = clean.slice(5);
+  else if (clean.startsWith("966") && clean.length >= 11) clean = clean.slice(3);
+  else if (clean.startsWith("05")) clean = clean.slice(1);
+
   return clean;
 }
 

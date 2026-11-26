@@ -7,6 +7,7 @@ import {
   LockKeyhole,
   LogIn,
   Mail,
+  Phone,
   ShieldCheck,
   UserRoundPlus,
 } from "lucide-react";
@@ -20,10 +21,18 @@ const logoUrl = "/images/al-shamel-logo.png";
 
 export default function LoginCard() {
   const [mode, setMode] = useState<AuthMode>("login");
+
+  // Login states
+  const [useEmailLogin, setUseEmailLogin] = useState(false);
+  const [loginCountryCode, setLoginCountryCode] = useState<"+967" | "+966">("+967");
+  const [loginPhone, setLoginPhone] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+
+  // Register states
   const [fullName, setFullName] = useState("");
-  const [phoneOrEmail, setPhoneOrEmail] = useState("");
+  const [countryCode, setCountryCode] = useState<"+967" | "+966">("+967");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -83,12 +92,28 @@ export default function LoginCard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim() || !password) {
-      toast.error("يرجى إدخال البريد الإلكتروني أو رقم الهاتف وكلمة المرور.");
+    let target = "";
+    if (useEmailLogin) {
+      target = identifier.trim();
+      if (!target) {
+        toast.error("يرجى إدخال البريد الإلكتروني.");
+        return;
+      }
+    } else {
+      const cleanDigits = loginPhone.trim().replace(/[^0-9]/g, "");
+      if (!cleanDigits || cleanDigits.length < 5) {
+        toast.error("يرجى إدخال رقم الهاتف بشكل صحيح.");
+        return;
+      }
+      target = `${loginCountryCode}${cleanDigits}`;
+    }
+
+    if (!password) {
+      toast.error("يرجى إدخال كلمة المرور.");
       return;
     }
     loginMutation.mutate({
-      identifier: identifier.trim(),
+      identifier: target,
       password,
     });
   };
@@ -99,8 +124,13 @@ export default function LoginCard() {
       toast.error("يرجى كتابة الاسم كاملاً.");
       return;
     }
-    if (!phoneOrEmail.trim() || phoneOrEmail.trim().length < 5) {
-      toast.error("يرجى إدخال رقم هاتف أو بريد إلكتروني صحيح.");
+    const cleanDigits = phoneNumber.trim().replace(/[^0-9]/g, "");
+    if (!cleanDigits || cleanDigits.length < 8) {
+      toast.error(
+        countryCode === "+967"
+          ? "يرجى إدخال رقم هاتف يمني صحيح (9 أرقام تبدأ بـ 7)."
+          : "يرجى إدخال رقم هاتف سعودي صحيح (9 أرقام تبدأ بـ 5)."
+      );
       return;
     }
     if (!password || password.length < 4) {
@@ -109,7 +139,7 @@ export default function LoginCard() {
     }
     registerMutation.mutate({
       name: fullName.trim(),
-      phone: phoneOrEmail.trim(),
+      phone: `${countryCode}${cleanDigits}`,
       password,
     });
   };
@@ -161,16 +191,56 @@ export default function LoginCard() {
       {mode === "login" ? (
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
-              <Mail className="h-4 w-4 text-blue-600" />
-              البريد الإلكتروني أو رقم الهاتف
-            </label>
-            <Input
-              placeholder="أدخل البريد الإلكتروني أو رقم الهاتف"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="h-12 text-right font-medium"
-            />
+            <div className="mb-2 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+                {useEmailLogin ? (
+                  <Mail className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <Phone className="h-4 w-4 text-blue-600" />
+                )}
+                {useEmailLogin ? "البريد الإلكتروني" : "رقم الهاتف"}
+              </label>
+              <button
+                type="button"
+                onClick={() => setUseEmailLogin(!useEmailLogin)}
+                className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
+              >
+                {useEmailLogin ? "👈 الدخول برقم الهاتف" : "👈 الدخول بالإيميل"}
+              </button>
+            </div>
+
+            {useEmailLogin ? (
+              <Input
+                type="email"
+                placeholder="أدخل البريد الإلكتروني المسجل"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className="h-12 text-left font-medium"
+              />
+            ) : (
+              <div className="flex items-center gap-2" dir="ltr">
+                <div className="relative shrink-0">
+                  <select
+                    value={loginCountryCode}
+                    onChange={(e) => setLoginCountryCode(e.target.value as "+967" | "+966")}
+                    className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-black text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer shadow-xs"
+                  >
+                    <option value="+967">🇾🇪 +967</option>
+                    <option value="+966">🇸🇦 +966</option>
+                  </select>
+                </div>
+                <div className="relative flex-1">
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder={loginCountryCode === "+967" ? "77XXXXXXX" : "5XXXXXXXX"}
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    className="h-12 font-mono font-bold text-left tracking-wider"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -201,27 +271,55 @@ export default function LoginCard() {
           <div>
             <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
               <UserRoundPlus className="h-4 w-4 text-blue-600" />
-              الاسم الرباعي
+              الاسم الرباعي الكامل
             </label>
             <Input
-              placeholder="مثال: محمد أحمد صالح علي"
+              placeholder="مثال: خالد خضر حسين الحميري"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="h-12"
+              className="h-12 font-bold"
             />
           </div>
 
           <div>
-            <label className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
-              <Mail className="h-4 w-4 text-blue-600" />
-              رقم الهاتف أو البريد الإلكتروني
-            </label>
-            <Input
-              placeholder="أدخل رقم الهاتف أو البريد الإلكتروني"
-              value={phoneOrEmail}
-              onChange={(e) => setPhoneOrEmail(e.target.value)}
-              className="h-12 text-right"
-            />
+            <div className="mb-2 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-black text-slate-700">
+                <Phone className="h-4 w-4 text-emerald-600" />
+                رقم الهاتف (فتح الخط)
+              </label>
+              <span className="text-[11px] font-bold text-slate-500">
+                {countryCode === "+967" ? "🇾🇪 اليمن (+967)" : "🇸🇦 السعودية (+966)"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2" dir="ltr">
+              <div className="relative shrink-0">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value as "+967" | "+966")}
+                  className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-black text-slate-900 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 cursor-pointer shadow-xs"
+                >
+                  <option value="+967">🇾🇪 +967</option>
+                  <option value="+966">🇸🇦 +966</option>
+                </select>
+              </div>
+
+              <div className="relative flex-1">
+                <Input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder={countryCode === "+967" ? "77XXXXXXX" : "5XXXXXXXX"}
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="h-12 font-mono font-bold text-left tracking-wider"
+                />
+              </div>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500 text-right">
+              {countryCode === "+967"
+                ? "👈 أدخل رقم هاتفك اليمني 9 أرقام (مثال: 7720079495)"
+                : "👈 أدخل رقم هاتفك السعودي 9 أرقام (مثال: 501234567)"}
+            </p>
           </div>
 
           <div>

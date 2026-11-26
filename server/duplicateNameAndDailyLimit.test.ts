@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeArabicName, getYemenStartOfDay } from "./db";
+import { normalizeArabicName, getYemenStartOfDay, normalizeIdentifier } from "./db";
 
 describe("normalizeArabicName", () => {
   it("normalizes identical names with different spacing or diacritics", () => {
@@ -45,5 +45,27 @@ describe("getYemenStartOfDay", () => {
     // At 2026-11-12 21:30:00 UTC (00:30 Yemen time on Nov 13), start of day moves to 2026-11-12 21:00:00 UTC.
     const dateAfterMidnightYemen = new Date(Date.UTC(2026, 10, 12, 21, 30, 0));
     expect(getYemenStartOfDay(dateAfterMidnightYemen).toISOString()).toBe("2026-11-12T21:00:00.000Z");
+  });
+});
+
+describe("normalizeIdentifier for Yemeni and Saudi numbers", () => {
+  it("normalizes Yemeni phone numbers correctly", () => {
+    expect(normalizeIdentifier("7720079495")).toBe("7720079495");
+    expect(normalizeIdentifier("07720079495")).toBe("7720079495");
+    expect(normalizeIdentifier("+9677720079495")).toBe("7720079495");
+    expect(normalizeIdentifier("009677720079495")).toBe("7720079495");
+    expect(normalizeIdentifier("٩٦٧٧٧٢٠٠٧٩٤٩٥")).toBe("7720079495");
+  });
+
+  it("normalizes Saudi phone numbers correctly", () => {
+    expect(normalizeIdentifier("501234567")).toBe("501234567");
+    expect(normalizeIdentifier("0501234567")).toBe("501234567");
+    expect(normalizeIdentifier("+966501234567")).toBe("501234567");
+    expect(normalizeIdentifier("00966501234567")).toBe("501234567");
+    expect(normalizeIdentifier("+966536402688")).toBe("536402688");
+  });
+
+  it("preserves email addresses unchanged", () => {
+    expect(normalizeIdentifier("nabel7720079495@gmail.com")).toBe("nabel7720079495@gmail.com");
   });
 });
