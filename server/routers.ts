@@ -37,6 +37,7 @@ import {
   setAnnouncementActive,
   createNotification,
   getAdminNotifications,
+  getUserNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   createTopUpRequest,
@@ -648,6 +649,12 @@ export const appRouter = router({
   }),
 
   notifications: router({
+    getMyNotifications: protectedProcedure
+      .input(z.object({ limit: z.number().default(20) }).optional())
+      .query(async ({ ctx, input }) => {
+        return await getUserNotifications(ctx.user.id, input?.limit || 20);
+      }),
+
     getAdminList: adminProcedure
       .input(z.object({ limit: z.number().default(40) }).optional())
       .query(async ({ input }) => {

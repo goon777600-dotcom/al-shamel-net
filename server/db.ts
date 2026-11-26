@@ -778,6 +778,17 @@ export async function getAdminNotifications(limit: number = 40) {
     .limit(limit);
 }
 
+export async function getUserNotifications(userId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
 export async function markNotificationAsRead(id: number) {
   const db = await getDb();
   if (!db) return;
@@ -952,13 +963,23 @@ export async function rejectTopUpRequest(
     })
     .where(eq(topUpRequests.id, requestId));
 
-  // Notify client
+  // Notify client with admin contact number and WhatsApp metadata
+  const adminPhone = "777600474";
+  const adminWhatsApp = "967777600474";
+
   await createNotification({
     userId: request.userId,
     type: "topup_request",
     title: "❌ اعتذار بخصوص طلب شحن المحفظة",
-    content: `تعذر قبول طلب الشحن بمبلغ ${request.amount} ر.ي. السبب: ${reason}`,
-    data: JSON.stringify({ requestId, reason }),
+    content: `تعذر قبول طلب الشحن بمبلغ ${request.amount} ر.ي. السبب: ${reason} — يمكنك التواصل مع الإدارة عبر الواتساب (${adminPhone}) لمراجعة وتأكيد طلبك.`,
+    data: JSON.stringify({
+      requestId,
+      reason,
+      amount: request.amount,
+      adminPhone,
+      adminWhatsApp,
+      status: "rejected",
+    }),
   });
 
   return { success: true };

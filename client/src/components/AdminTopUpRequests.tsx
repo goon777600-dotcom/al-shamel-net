@@ -1,5 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import {
   CheckCircle2,
@@ -10,13 +19,59 @@ import {
   User,
   XCircle,
   FileText,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+interface RejectDialogState {
+  requestId: number;
+  userName: string | null;
+  amount: string;
+  referenceNumber?: string | null;
+  method?: string | null;
+}
+
+const QUICK_REJECTION_REASONS = [
+  {
+    id: "not_received",
+    title: "لم يصل إشعار التحويل في حسابنا حتى الآن",
+    icon: "⏳",
+  },
+  {
+    id: "invalid_ref",
+    title: "رقم السند أو رقم الحوالة غير صحيح",
+    icon: "📄",
+  },
+  {
+    id: "amount_mismatch",
+    title: "المبلغ المحول غير مطابق للمبلغ المطلوب",
+    icon: "💵",
+  },
+  {
+    id: "wrong_account",
+    title: "الحساب المحول إليه غير صحيح / لم نستلم المبلغ",
+    icon: "🏦",
+  },
+  {
+    id: "service_provider",
+    title: "رصيدك أو عمليتك تحتاج مراجعة، تواصل مع مزود الخدمة",
+    icon: "⚠️",
+  },
+  {
+    id: "contact_admin",
+    title: "يرجى التواصل مع إدارة الشبكة عبر الواتساب لتأكيد العملية",
+    icon: "💬",
+  },
+];
+
 export default function AdminTopUpRequests() {
   const utils = trpc.useUtils();
   const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | undefined>("pending");
+
+  const [rejectDialog, setRejectDialog] = useState<RejectDialogState | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const { data: requests = [], isLoading, refetch, isFetching } =
     trpc.topUp.getAdminRequests.useQuery({ status: filter }, {
@@ -39,7 +94,9 @@ export default function AdminTopUpRequests() {
     onSuccess: async () => {
       await utils.topUp.getAdminRequests.invalidate();
       await utils.notifications.getAdminList.invalidate();
-      toast.info("تم رفض الطلب وإرسال التنبيه للعميل");
+      setRejectDialog(null);
+      setRejectReason("");
+      toast.info("تم رفض الطلب وإرسال التنبيه للعميل برقم الواتساب");
     },
     onError: (err) => {
       toast.error(err.message || "تعذر رفض الطلب");
@@ -52,11 +109,31 @@ export default function AdminTopUpRequests() {
     }
   };
 
-  const handleReject = (id: number) => {
-    const reason = prompt("يرجى كتابة سبب الرفض للعميل (مثلاً: لم تصل الحوالة / رقم السند غير صحيح):");
-    if (reason && reason.trim()) {
-      rejectMutation.mutate({ requestId: id, reason: reason.trim() });
+  const openRejectDialog = (req: {
+    id: number;
+    userName: string | null;
+    amount: string;
+    referenceNumber: string | null;
+    method: string | null;
+  }) => {
+    setRejectDialog({
+      requestId: req.id,
+      userName: req.userName,
+      amount: req.amount,
+      referenceNumber: req.referenceNumber,
+      method: req.method,
+    });
+    setRejectReason(QUICK_REJECTION_REASONS[0].title);
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectDialog) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      toast.error("يرجى اختيار أو كتابة سبب الرفض");
+      return;
     }
+    rejectMutation.mutate({ requestId: rejectDialog.requestId, reason });
   };
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
@@ -253,9 +330,9 @@ export default function AdminTopUpRequests() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleReject(item.id)}
+                        onClick={() => openRejectDialog(item)}
                         disabled={rejectMutation.isPending}
-                        className="border-rose-200 text-rose-700 hover:bg-rose-50 text-xs h-9 px-2.5"
+                        className="border-rose-200 text-rose-700 hover:bg-rose-50 text-xs h-9 px-2.5 cursor-pointer font-bold"
                       >
                         <XCircle className="ml-1 h-4 w-4" />
                         رفض
@@ -268,6 +345,114 @@ export default function AdminTopUpRequests() {
           ))}
         </div>
       )}
+
+      {/* Quick Reject Dialog for Admin */}
+      <Dialog open={Boolean(rejectDialog)} onOpenChange={(open) => !open && setRejectDialog(null)}>
+        <DialogContent dir="rtl" className="max-w-md p-5 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-right text-base font-black text-rose-950 flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-700 text-sm shadow-xs">
+                ❌
+              </span>
+              <span>رفض طلب شحن المحفظة</span>
+            </DialogTitle>
+            <DialogDescription className="text-right text-xs text-slate-500">
+              اختر سبباً سريعاً بنقرة واحدة أو اكتب ملاحظتك. سيصل التنبيه فوراً للعميل مع رقم الواتساب لمراسلتك.
+            </DialogDescription>
+          </DialogHeader>
+
+          {rejectDialog && (
+            <div className="space-y-4 my-2">
+              {/* Summary Card */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-500">العميل:</span>
+                  <span className="font-black text-slate-900">{rejectDialog.userName || "بدون اسم"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-500">المبلغ المطلوب:</span>
+                  <span className="font-black font-mono text-amber-700">{parseFloat(rejectDialog.amount).toLocaleString("ar-YE")} ر.ي</span>
+                </div>
+                {rejectDialog.referenceNumber && (
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-500">رقم السند/الحوالة:</span>
+                    <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">{rejectDialog.referenceNumber}</span>
+                  </div>
+                )}
+                {rejectDialog.method && (
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-500">طريقة التحويل:</span>
+                    <span className="font-bold text-slate-800">{rejectDialog.method}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Reason Pills */}
+              <div>
+                <label className="block text-xs font-black text-slate-800 mb-2">
+                  ⚡ اختر سبب الرفض السريع (بلمسة واحدة):
+                </label>
+                <div className="flex flex-col gap-1.5">
+                  {QUICK_REJECTION_REASONS.map((r) => {
+                    const isSelected = rejectReason === r.title;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRejectReason(r.title)}
+                        className={`text-right px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                          isSelected
+                            ? "bg-rose-50 border-rose-400 text-rose-900 shadow-xs"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="text-sm shrink-0">{r.icon}</span>
+                        <span className="flex-1 leading-snug">{r.title}</span>
+                        {isSelected && <span className="text-rose-600 font-black text-xs shrink-0">✓ محدد</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Editable Reason Textarea */}
+              <div>
+                <label className="block text-xs font-black text-slate-800 mb-1">
+                  نص سبب الرفض الموجه للعميل (يمكنك التعديل عليه):
+                </label>
+                <Textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="اكتب أو اختر سبب الرفض…"
+                  className="text-xs font-bold min-h-[70px] resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2 flex-row sm:justify-start">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={rejectMutation.isPending || !rejectReason.trim()}
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs h-10 cursor-pointer"
+            >
+              <XCircle className="ml-1.5 h-4 w-4" />
+              {rejectMutation.isPending ? "جارٍ إرسال الرفض…" : "تأكيد رفض الطلب وإشعار العميل"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectDialog(null)}
+              disabled={rejectMutation.isPending}
+              className="text-xs font-bold h-10 cursor-pointer"
+            >
+              إلغاء
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

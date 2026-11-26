@@ -69,3 +69,25 @@ describe("normalizeIdentifier for Yemeni and Saudi numbers", () => {
     expect(normalizeIdentifier("nabel7720079495@gmail.com")).toBe("nabel7720079495@gmail.com");
   });
 });
+
+describe("TopUp Rejection and WhatsApp direct contact", () => {
+  it("formats WhatsApp contact URL correctly with admin number 967777600474", () => {
+    const adminPhone = "777600474";
+    const adminWhatsApp = "967777600474";
+    const requestId = 101;
+    const amount = "2000";
+    const reason = "لم يصل إشعار التحويل في حسابنا حتى الآن";
+
+    const notificationContent = `تعذر قبول طلب الشحن بمبلغ ${amount} ر.ي. السبب: ${reason} — يمكنك التواصل مع الإدارة عبر الواتساب (${adminPhone}) لمراجعة وتأكيد طلبك.`;
+    expect(notificationContent).toContain("777600474");
+    expect(notificationContent).toContain(reason);
+
+    const encodedMsg = encodeURIComponent(
+      `مرحباً إدارة شبكة الشامل،\nبخصوص طلب شحن المحفظة رقم #${requestId} بمبلغ ${amount} ر.ي (المرفوض)\nسبب الرفض المسجل: ${reason}\nأود مراجعة وتأكيد العملية معكم، وشكراً.`
+    );
+    const waUrl = `https://wa.me/${adminWhatsApp}?text=${encodedMsg}`;
+    expect(waUrl).toContain("967777600474");
+    expect(decodeURIComponent(waUrl)).toContain(reason);
+    expect(decodeURIComponent(waUrl)).toContain("#101");
+  });
+});
